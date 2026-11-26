@@ -9,6 +9,3 @@
 *.glb binary
 *.blend binary
 *.woff2 binary
-
-# Kept byte-for-byte: this fixture tests CRLF handling.
-tests/fixtures/claude_code/crlf.jsonl -text

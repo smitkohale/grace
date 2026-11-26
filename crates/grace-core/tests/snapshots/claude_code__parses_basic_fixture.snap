@@ -1,0 +1,27 @@
+---
+source: crates/grace-core/tests/claude_code.rs
+expression: render(&run)
+---
+boundary session_start seq  0 line  1 {}
+ 0 L1  t-  instruction_load  attachment/instructions            Loaded CLAUDE.md (Project)
+ 1 L1  t-  instruction_load  attachment/instructions            Loaded MEMORY.md (AutoMem)
+ 2 L2  t-  request_snapshot  api-request-shape                  System prompt (2 parts) and 1 tool (shape shape000)
+ 3 L3  t1  user_message      user/prompt                        Fix the sprite sheet loader
+ 4 L4  t1  request_snapshot  api-request                        Request to claude-opus-5-5 (1 new message)
+ 5 L6  t1  assistant_message assistant/thinking                 (thinking, 23 characters)
+ 6 L6  t1  assistant_message assistant/text                     I'll install the dependencies first.
+ 7 L6  t1  tool_call         assistant/tool_use                 Bash: pnpm install
+ 8 L7  t1  tool_result       user/tool_result                   Bash result: Done in 2.1s
+ 9 L8  t1  hook_run          attachment/hook_additional_context Hook PostToolUse:Bash added context
+10 L9  t1  tool_call         assistant/tool_use                 mcp__ccd_turn__update_plan
+11 L9  t1  task_update       assistant/task_update              Task list: 2 items, 0 done, 1 in progress
+12 L10 t1  tool_result       user/tool_result                   mcp__ccd_turn__update_plan result: Plan shown (2 steps).
+13 L11 t1  unknown           future-thing                       Unknown entry: future-thing
+14 L13 t2  user_message      user/prompt                        Now add a test
+15 L14 t2  assistant_message assistant/text                     Added a test for the loader.
+16 L15 t2  hook_run          system/stop_hook_summary           Stop hooks: 1 ran, 0 errors
+info: title=Some("Fix the sprite sheet") turns=2 compactions=0 models=["claude-opus-5-5"]
+info: version=Some("2.1.330") entrypoint=Some("claude-desktop") branch=Some("main") project=Some("C:\\Users\\Test User\\Projects\\Fern & Fable")
+info: started=Some("2026-11-23T07:45:00.000Z") last=Some("2026-11-23T07:46:41.000Z")
+info: first_prompt=Some("Fix the sprite sheet loader") last_prompt=Some("Now add a test")
+stats: lines=19 bad=0 ignored=6 unknown={"future-thing": 1}

@@ -2,7 +2,9 @@
 //!
 //! Everything here works without any AI model (spec §4, principle 4).
 
+pub mod adapters;
 pub mod event;
+pub mod paths;
 pub mod redact;
 pub mod timefmt;
 
