@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+members = ["crates/grace-core"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/smitkohale/grace"
+rust-version = "1.85"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+# Smaller debug info keeps the target folder and link-time memory down (7.7 GB dev machine).
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
