@@ -1,0 +1,31 @@
+# Rust
+/target/
+
+# Node
+node_modules/
+/ui/dist/
+/ui/test-results/
+/ui/playwright-report/
+*.tsbuildinfo
+
+# Tauri
+/app/src-tauri/target/
+/app/src-tauri/gen/
+/app/src-tauri/binaries/
+
+# Blender backups
+*.blend1
+*.blend@
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Secrets and local data: never commit (R8, R9)
+.env
+.env.*
+
+# Local agent scratch
+.remember/
