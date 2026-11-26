@@ -1,9 +1,11 @@
 //! Scanning: discover sessions, read only what changed, store the results.
 
-use crate::Redactor;
 use crate::adapters::{Adapter, ParseStats, SessionRef};
+use crate::config::Config;
+use crate::discover::DiscoveryEnv;
 use crate::fingerprint::fnv1a64;
 use crate::store::Store;
+use crate::{Redactor, ToolId};
 use anyhow::{Context, Result};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -34,6 +36,15 @@ pub struct ScanReport {
     /// One plain line per session or tool that couldn't be read.
     pub errors: Vec<String>,
     pub duration_ms: u64,
+}
+
+/// The adapters to scan with, given the user's settings. M0 reads Claude Code only.
+pub fn adapters_for(config: &Config, env: &DiscoveryEnv) -> Vec<Box<dyn Adapter>> {
+    let mut adapters: Vec<Box<dyn Adapter>> = Vec::new();
+    if config.tool_enabled(ToolId::ClaudeCode) {
+        adapters.push(Box::new(env.claude_code()));
+    }
+    adapters
 }
 
 /// Brings the store up to date with every adapter's sessions. One bad session

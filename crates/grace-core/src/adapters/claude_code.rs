@@ -59,6 +59,9 @@ const IGNORED_ATTACHMENTS: &[&str] = &[
     "file",
     "edited_text_file",
     "queued_command",
+    // Seen 2026-11-27 through Grace's own drift log.
+    "plan_mode",
+    "plan_mode_exit",
 ];
 /// The agent's own task lists: the desktop app's plan tool and the CLI's task tools.
 const TASK_TOOLS: &[&str] = &[

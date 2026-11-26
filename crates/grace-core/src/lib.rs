@@ -3,6 +3,10 @@
 //! Everything here works without any AI model (spec §4, principle 4).
 
 pub mod adapters;
+#[cfg(feature = "server")]
+pub mod api;
+pub mod config;
+pub mod discover;
 pub mod event;
 pub mod fingerprint;
 pub mod paths;
