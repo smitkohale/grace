@@ -5,6 +5,7 @@
 //! against Claude Code 2.1.330. Unknown entry types are logged, never fatal.
 
 use super::{Adapter, ParseOutcome, ParseState, ParseStats, Parsed, SessionRef};
+use crate::fingerprint::fnv1a64;
 use crate::{
     Boundary, BoundaryKind, Event, EventKind, Redactor, ToolId, paths, prefix_chars, timefmt,
     truncate_chars,
@@ -695,7 +696,7 @@ impl Parser<'_> {
                         "path": self.redactor.redact(path),
                         "type": file_type,
                         "chars": content.chars().count(),
-                        "hash": fnv1a64(content),
+                        "hash": fnv1a64(content.as_bytes()),
                     });
                     self.push(
                         ev(
@@ -1007,16 +1008,6 @@ fn file_name(path: &str) -> &str {
     path.rsplit(['/', '\\']).next().unwrap_or(path)
 }
 
-/// A stable, non-cryptographic fingerprint of instruction text.
-fn fnv1a64(text: &str) -> String {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in text.bytes() {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(0x0100_0000_01b3);
-    }
-    format!("{hash:016x}")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1038,6 +1029,5 @@ mod tests {
         assert_eq!(short_count(999), "999");
         assert_eq!(file_name(r"C:\a b\CLAUDE.md"), "CLAUDE.md");
         assert_eq!(file_name("/x/AGENTS.md"), "AGENTS.md");
-        assert_eq!(fnv1a64(""), "cbf29ce484222325");
     }
 }

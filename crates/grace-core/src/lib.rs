@@ -4,8 +4,11 @@
 
 pub mod adapters;
 pub mod event;
+pub mod fingerprint;
 pub mod paths;
 pub mod redact;
+pub mod scan;
+pub mod store;
 pub mod timefmt;
 
 pub use event::{Boundary, BoundaryKind, Event, EventKind, ToolId};
