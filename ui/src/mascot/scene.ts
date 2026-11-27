@@ -11,7 +11,7 @@ import {
   MeshStandardMaterial,
   NeutralToneMapping,
   type Object3D,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
   PMREMGenerator,
@@ -110,9 +110,19 @@ export async function createGraceScene(
   // light from above with peach-toned shadows, and a strong key from the upper
   // left that casts soft shadows (bangs on the face, head on the scarf).
   const pmrem = new PMREMGenerator(renderer);
-  const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environment = environment;
+  const room = new RoomEnvironment();
+  const environment = pmrem.fromScene(room, 0.04);
+  // Only the finished lighting is kept; the generator's working memory goes now.
+  pmrem.dispose();
+  room.dispose();
+  scene.environment = environment.texture;
   scene.environmentIntensity = 0.25;
+  // Hands the GPU memory back at once instead of whenever the page collects garbage.
+  const release = () => {
+    environment.dispose();
+    renderer.dispose();
+    renderer.forceContextLoss();
+  };
   scene.add(new HemisphereLight(0xfff4ec, 0xa88a7c, 0.5));
   // From above and to the left: tops brightest, fronts a little darker, her
   // left-hand sides in warm shadow, as in the master render.
@@ -135,9 +145,15 @@ export async function createGraceScene(
   fill.position.set(5, 1.5, 4);
   scene.add(fill);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.shadowMap.type = PCFShadowMap;
 
-  const gltf = await new GLTFLoader().loadAsync(options.modelUrl);
+  let gltf: Awaited<ReturnType<GLTFLoader["loadAsync"]>>;
+  try {
+    gltf = await new GLTFLoader().loadAsync(options.modelUrl);
+  } catch (error) {
+    release();
+    throw error;
+  }
   const model = gltf.scene;
   scene.add(model);
   model.traverse((object) => {
@@ -409,7 +425,7 @@ export async function createGraceScene(
       shadow.geometry.dispose();
       shadow.material.map?.dispose();
       shadow.material.dispose();
-      renderer.dispose();
+      release();
     },
   };
 }

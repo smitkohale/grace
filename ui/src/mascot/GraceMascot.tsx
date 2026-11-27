@@ -15,13 +15,25 @@ export interface GraceMascotProps {
   className?: string;
 }
 
+let webglWorks: boolean | undefined;
+
+/**
+ * Whether this browser can draw WebGL. Checked once per page, and the check's
+ * own context is released at once: each live context holds GPU memory, and
+ * browsers cap how many a page may have.
+ */
 function supportsWebGL(): boolean {
-  try {
-    const canvas = document.createElement("canvas");
-    return Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
-  } catch {
-    return false;
+  if (webglWorks === undefined) {
+    try {
+      const probe = document.createElement("canvas");
+      const gl = probe.getContext("webgl2") ?? probe.getContext("webgl");
+      webglWorks = Boolean(gl);
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    } catch {
+      webglWorks = false;
+    }
   }
+  return webglWorks;
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -45,7 +57,7 @@ function usePrefersReducedMotion(): boolean {
  * also in text.
  */
 export function GraceMascot({ state, size, className }: GraceMascotProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const holderRef = useRef<HTMLElement | null>(null);
   const sceneRef = useRef<GraceScene | null>(null);
   const stateRef = useRef(state);
@@ -56,11 +68,17 @@ export function GraceMascot({ state, size, className }: GraceMascotProps) {
   stateRef.current = state;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !supportsWebGL()) {
+    const stage = stageRef.current;
+    if (!stage || !supportsWebGL()) {
       setMode("flat");
       return;
     }
+    // A fresh canvas for every mount: leaving the screen releases the old
+    // canvas's GPU memory, and a released canvas can't draw again (React's
+    // StrictMode mounts twice in development).
+    const canvas = document.createElement("canvas");
+    canvas.className = "absolute inset-0 size-full touch-none";
+    stage.append(canvas);
     let cancelled = false;
     let scene: GraceScene | null = null;
     import("./scene")
@@ -83,6 +101,7 @@ export function GraceMascot({ state, size, className }: GraceMascotProps) {
       cancelled = true;
       scene?.dispose();
       sceneRef.current = null;
+      canvas.remove();
     };
   }, [reducedMotion]);
 
@@ -117,10 +136,10 @@ export function GraceMascot({ state, size, className }: GraceMascotProps) {
   );
   const visuals = (
     <>
-      <canvas
-        ref={canvasRef}
+      <div
+        ref={stageRef}
         className={cn(
-          "absolute inset-0 size-full touch-none transition-opacity duration-500",
+          "absolute inset-0 transition-opacity duration-500",
           mode === "live" ? "opacity-100" : "opacity-0",
         )}
       />
