@@ -1,16 +1,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Builds Grace, the mascot, as a low-poly 3D model.
+"""Builds Grace, the mascot, as a low-poly 3D model that matches the master render.
 
-The only reference is the 2D master render (assets/brand/grace-mascot.png), so
-Grace is assembled here from simple shapes, with flat colours from the palette
-in docs/DESIGN.md. Run it headless; nobody needs to open Blender:
+The only reference is the 2D master render (assets/brand/grace-mascot.png,
+1448 x 1086). Every part here is placed from measurements of that image:
+X(px) and Z(py) turn image pixels into model units, so a front view of the
+model lines up with the picture. Run it headless; nobody needs to open Blender:
 
     blender -b --factory-startup -P assets/brand/mascot/build_grace.py -- \
-        --out assets/brand/mascot/grace.glb [--render DIR] [--blend FILE]
+        --out assets/brand/mascot/grace.glb [--render DIR] [--compare FILE]
+
+`--compare FILE` renders the front view at the master's size and framing with a
+transparent background, for overlaying on the master.
 
 Blender axes: Z is up and Grace faces -Y. She is about 2 units tall.
 Node names are a contract with the app (ui/src/mascot/scene.ts):
-Grace, Body, ArmL, ArmR, LegL, LegR, Scarf, Tail, TailSeg0..5, Cubes, Cube0..3,
+Grace, Body, ArmL, ArmR, LegL, LegR, Scarf, Tail, Cubes, Cube0, Cube1,
 LookPivot, Head, EyeL, EyeR, PupilL, PupilR, CheekL, CheekR, Ahoge, Bow, Clip.
 Every parent node is unrotated, so a child's position is simply its world
 position minus its parent's.
@@ -28,17 +32,44 @@ import bmesh
 import bpy
 from mathutils import Euler, Matrix, Vector
 
+# ----- measurements -------------------------------------------------------------
+
+S = 0.0024  # model units per pixel of the master render
+CAMERA_PITCH = math.radians(6)  # the master looks down slightly
+MASTER_W, MASTER_H = 1448, 1086
+
+
+def X(px):
+    return (px - 690) * S
+
+
+def Z(py):
+    return (950 - py) * S
+
+
+def D(depth_px):
+    """Depth: 0 is the front of the body, negative is toward the viewer."""
+    return depth_px * S
+
+
+def P(px, py, depth_px=0.0):
+    return Vector((X(px), D(depth_px), Z(py)))
+
+
+# Sampled from the master render (lit whites #F5E1D7 to #FEF6EF, teal #03A4A5 to
+# #4EB9B7, blacks #262423 to #433A35, pupils #FEC66D, glowing cubes #8EF6F5).
 PALETTE = {
-    "white": "#F3EEE9",
-    "teal": "#55C9CD",
-    "black": "#2E2C2F",
-    "amber": "#FCC067",
-    "silver": "#A6AAB0",
+    "white": "#F7ECE4",
+    "teal": "#26B2B4",
+    "black": "#2C2826",
+    "amber": "#FEC66D",
+    "silver": "#BDB3AE",
+    "glow": "#5FE3E3",
 }
 
-BODY_AT = Vector((0, 0, 0.325))
-NECK_AT = Vector((0, 0, 0.66))
-TAIL_AT = Vector((0.24, 0.24, 0.2))
+BODY_AT = P(692.5, 787, 130)
+NECK_AT = P(690, 715, 145)
+TAIL_AT = P(870, 835, 180)
 
 
 # ----- materials ---------------------------------------------------------------
@@ -91,71 +122,103 @@ def finish_mesh(name, bm, materials):
     return mesh
 
 
-def box_bm(size, bevel=0.0):
+def bevel(bm, offset):
+    if offset > 0:
+        bmesh.ops.bevel(
+            bm,
+            geom=list(bm.edges),
+            offset=offset,
+            segments=1,
+            profile=0.5,
+            affect="EDGES",
+            clamp_overlap=True,
+        )
+    return bm
+
+
+def box_bm(size, bevel_by=0.0):
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
     bmesh.ops.scale(bm, vec=Vector(size), verts=bm.verts)
-    if bevel > 0:
-        bmesh.ops.bevel(
-            bm, geom=list(bm.edges), offset=bevel, segments=1, profile=0.5, affect="EDGES"
-        )
-    return bm
+    return bevel(bm, bevel_by)
 
 
-def box(name, size, material, bevel=0.0):
-    return finish_mesh(name, box_bm(size, bevel), [material])
+def px_box(x0, x1, z_top, z_bottom, y_front, y_back, bevel_px=0.0):
+    """A box from image-pixel bounds; returns (bmesh, centre)."""
+    size = (abs(x1 - x0) * S, abs(y_back - y_front) * S, abs(z_bottom - z_top) * S)
+    centre = P((x0 + x1) / 2, (z_top + z_bottom) / 2, (y_front + y_back) / 2)
+    return box_bm(size, bevel_px * S), centre
 
 
-def prism_bm(outline, depth, taper=1.0):
-    """Extrudes a polygon drawn in the XZ plane (front view) along Y, centred on y=0.
-    `taper` scales the back face around the polygon's centre (1 = straight)."""
+def plate(outline_px, y_front, thickness, bevel_px=4.0, tilt=0.0, taper=1.0, yaw=0.0):
+    """A flat plate whose front outline is drawn in image pixels. Returns
+    (bmesh, centre); tilt leans the bottom toward the viewer and yaw turns the
+    right end toward the viewer (radians)."""
+    pts = [(X(px), Z(py)) for px, py in outline_px]
+    cx = sum(p[0] for p in pts) / len(pts)
+    cz = sum(p[1] for p in pts) / len(pts)
+    depth = thickness * S
     bm = bmesh.new()
-    cx = sum(p[0] for p in outline) / len(outline)
-    cz = sum(p[1] for p in outline) / len(outline)
-    front = [bm.verts.new((x, -depth / 2, z)) for x, z in outline]
-    back = [
-        bm.verts.new((cx + (x - cx) * taper, depth / 2, cz + (z - cz) * taper)) for x, z in outline
-    ]
+    front = [bm.verts.new((x - cx, -depth / 2, z - cz)) for x, z in pts]
+    back = [bm.verts.new(((x - cx) * taper, depth / 2, (z - cz) * taper)) for x, z in pts]
     bm.faces.new(front)
     bm.faces.new(list(reversed(back)))
-    count = len(outline)
-    for i in range(count):
-        j = (i + 1) % count
+    for i in range(len(pts)):
+        j = (i + 1) % len(pts)
         bm.faces.new((front[i], back[i], back[j], front[j]))
-    return bm
-
-
-def mark_side_faces(bm, material_index, threshold=0.6):
-    """Gives faces that don't point front or back (along Y) another material."""
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    bm.normal_update()
-    for face in bm.faces:
-        if abs(face.normal.y) < threshold:
-            face.material_index = material_index
+    bevel(bm, bevel_px * S)
+    if tilt:
+        bm.transform(Euler((-tilt, 0, 0)).to_matrix().to_4x4())
+    if yaw:
+        bm.transform(Euler((0, 0, -yaw)).to_matrix().to_4x4())
+    return bm, Vector((cx, D(y_front + thickness / 2), cz))
+
+
+def tube_bm(points, heights, depths, sides=7, twist=0.35):
+    """A faceted tube through `points` with elliptical sections (low-poly look)."""
+    bm = bmesh.new()
+    rings = []
+    for i, p in enumerate(points):
+        before = points[max(i - 1, 0)]
+        after = points[min(i + 1, len(points) - 1)]
+        tangent = (after - before).normalized()
+        side = tangent.cross(Vector((0, 1, 0)))
+        if side.length < 1e-6:
+            side = Vector((0, 0, 1))
+        side.normalize()
+        normal = tangent.cross(side).normalized()
+        ring = []
+        for k in range(sides):
+            a = 2 * math.pi * k / sides + twist * i
+            offset = side * math.cos(a) * heights[i] / 2 + normal * math.sin(a) * depths[i] / 2
+            ring.append(bm.verts.new(p + offset))
+        rings.append(ring)
+    for a, b in zip(rings, rings[1:]):
+        for k in range(sides):
+            m = (k + 1) % sides
+            bm.faces.new((a[k], a[m], b[m], b[k]))
+    bm.faces.new(rings[0])
+    bm.faces.new(list(reversed(rings[-1])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
 
 
 def loft_bm(points, widths, thicknesses):
-    """A strand: rectangles of the given width/thickness swept through `points`."""
+    """A flat strand: rectangles of width x thickness swept through `points`,
+    with its wide side facing the viewer."""
     bm = bmesh.new()
     rings = []
-    up = Vector((0, -1, 0))
-    for i, point in enumerate(points):
-        p = Vector(point)
-        before = Vector(points[max(i - 1, 0)])
-        after = Vector(points[min(i + 1, len(points) - 1)])
+    toward_viewer = Vector((0, -1, 0))
+    for i, p in enumerate(points):
+        before = points[max(i - 1, 0)]
+        after = points[min(i + 1, len(points) - 1)]
         tangent = (after - before).normalized()
-        side = tangent.cross(up)
-        if side.length < 1e-6:
-            side = Vector((1, 0, 0))
-        side.normalize()
+        side = tangent.cross(toward_viewer).normalized()
         normal = side.cross(tangent).normalized()
         w, t = widths[i] / 2, thicknesses[i] / 2
-        corners = (
-            p + side * w + normal * t,
-            p - side * w + normal * t,
-            p - side * w - normal * t,
-            p + side * w - normal * t,
-        )
+        corners = (p + side * w + normal * t, p - side * w + normal * t,
+                   p - side * w - normal * t, p + side * w - normal * t)
         rings.append([bm.verts.new(c) for c in corners])
     for a, b in zip(rings, rings[1:]):
         for k in range(4):
@@ -163,27 +226,30 @@ def loft_bm(points, widths, thicknesses):
             bm.faces.new((a[k], a[m], b[m], b[k]))
     bm.faces.new(rings[0])
     bm.faces.new(list(reversed(rings[-1])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return bm
 
 
-def merge_bms(name, pieces, materials):
-    """Combines (bmesh, location, rotation, material_index_offset) pieces into one mesh."""
+def paint(bm, index, where=None):
+    """Sets the material of every face (or of faces where `where(face)` is true)."""
+    bm.normal_update()
+    for face in bm.faces:
+        if where is None or where(face):
+            face.material_index = index
+    return bm
+
+
+def merge(name, pieces, materials, origin):
+    """Combines (bmesh, world centre) pieces into one mesh whose origin is `origin`."""
     out = bmesh.new()
-    for bm, location, rotation in pieces:
-        matrix = Matrix.Translation(Vector(location)) @ Euler(rotation).to_matrix().to_4x4()
-        bm.transform(matrix)
+    for bm, centre in pieces:
+        bm.transform(Matrix.Translation(Vector(centre) - Vector(origin)))
         temp = bpy.data.meshes.new("temp")
         bm.to_mesh(temp)
         bm.free()
         out.from_mesh(temp)
         bpy.data.meshes.remove(temp)
     return finish_mesh(name, out, materials)
-
-
-def with_material(bm, index):
-    for face in bm.faces:
-        face.material_index = index
-    return bm
 
 
 def node(name, data, world, parent=None, parent_world=Vector((0, 0, 0)), rotation=(0, 0, 0)):
@@ -198,183 +264,186 @@ def node(name, data, world, parent=None, parent_world=Vector((0, 0, 0)), rotatio
     return obj
 
 
-def centred(mesh, origin):
-    """Moves a mesh built in world coordinates so `origin` becomes its origin."""
-    mesh.transform(Matrix.Translation(-Vector(origin)))
-    return mesh
-
-
 # ----- Grace -------------------------------------------------------------------
 
+WHITE, TEAL, BLACK, AMBER, SILVER, GLOW = range(6)
 
-def build(mat):
-    W, T, K, A, S = mat["white"], mat["teal"], mat["black"], mat["amber"], mat["silver"]
+
+def build(mats):
+    palette = [mats[k] for k in ("white", "teal", "black", "amber", "silver", "glow")]
     root = node("Grace", None, (0, 0, 0))
 
-    # Body, legs and arms -------------------------------------------------------
-    body = node("Body", box("Body", (0.52, 0.4, 0.27), W, bevel=0.035), BODY_AT, root)
+    # Body: a wide white block; the legs are tall boxes flush with its sides.
+    bm, centre = px_box(541, 844, 700, 874, 0, 260, bevel_px=10)
+    body = node("Body", merge("Body", [(paint(bm, WHITE), centre)], palette, BODY_AT), BODY_AT, root)
 
-    for side, name in ((-1, "LegL"), (1, "LegR")):
-        x = 0.19 * side
-        leg_at = Vector((x, 0, 0.21))
-        mesh = merge_bms(
-            name,
-            [
-                (with_material(box_bm((0.225, 0.27, 0.17), 0.03), 0), (x, -0.01, 0.085), (0, 0, 0)),
-                (with_material(box_bm((0.215, 0.255, 0.04), 0.006), 1), (x, -0.005, 0.19), (0, 0, 0)),
-                (with_material(box_bm((0.195, 0.22, 0.05), 0.004), 2), (x, 0, 0.23), (0, 0, 0)),
-            ],
-            [K, T, W],
-        )
-        node(name, centred(mesh, leg_at), leg_at, body, BODY_AT)
+    for name, (x0, x1) in (("LegL", (542, 659)), ("LegR", (724, 841))):
+        origin = P((x0 + x1) / 2, 874, 130)
+        pieces = []
+        bm, c = px_box(x0, x1, 852, 894, 70, 190, bevel_px=6)
+        pieces.append((paint(bm, WHITE), c))
+        bm, c = px_box(x0 - 3, x1 + 3, 892, 909, 66, 194, bevel_px=3)
+        pieces.append((paint(bm, TEAL), c))
+        bm, c = px_box(x0 - 2, x1 + 2, 908, 950, 64, 196, bevel_px=7)
+        pieces.append((paint(bm, BLACK), c))
+        node(name, merge(name, pieces, palette, origin), origin, body, BODY_AT)
 
-    # Small arms tucked flush against her sides: hidden from the front at rest,
-    # they swing out to wave or hold the clipboard.
-    for side, name in ((-1, "ArmL"), (1, "ArmR")):
-        shoulder = Vector((0.272 * side, 0.05, 0.43))
-        arm = box(name, (0.06, 0.14, 0.19), W, bevel=0.015)
-        arm.transform(Matrix.Translation((0, 0, -0.095)))  # origin at the shoulder
-        node(name, arm, shoulder, body, BODY_AT)
+    # Small arms hidden inside the body's sides at rest; they swing out to wave.
+    for name, x in (("ArmL", 556), ("ArmR", 829)):
+        shoulder = P(x, 722, 150)
+        bm, c = px_box(x - 17, x + 17, 722, 852, 105, 195, bevel_px=8)
+        node(name, merge(name, [(paint(bm, WHITE), c)], palette, shoulder), shoulder, body, BODY_AT)
 
-    # Scarf: band, front flap with the teal diamond, buckle, trailing ends -------
-    band = bmesh.new()
-    bmesh.ops.create_cone(band, cap_ends=True, segments=8, radius1=0.33, radius2=0.31, depth=0.11)
-    diamond = bmesh.new()
-    outer, inner = 0.058, 0.034
-    o = [diamond.verts.new(v) for v in ((0, 0, outer), (outer, 0, 0), (0, 0, -outer), (-outer, 0, 0))]
-    i_ = [diamond.verts.new(v) for v in ((0, 0, inner), (inner, 0, 0), (0, 0, -inner), (-inner, 0, 0))]
+    # Scarf: a black collar plate with a triangular flap, teal diamond, silver
+    # buckle, and two loose ends behind her on the left.
+    scarf_at = P(690, 760, 0)
+    pieces = []
+    bm, c = px_box(527, 854, 715, 781, -12, 262, bevel_px=6)
+    pieces.append((paint(bm, BLACK), c))
+    bm, c = plate([(531, 717), (850, 717), (850, 780), (690, 845), (531, 780)], -30, 18, bevel_px=5)
+    pieces.append((paint(bm, BLACK), c))
+    ring = bmesh.new()
+    o = [ring.verts.new((X(x), 0, Z(z))) for x, z in ((690, 750), (719, 781), (690, 812), (661, 781))]
+    i_ = [ring.verts.new((X(x), 0, Z(z))) for x, z in ((690, 762), (707, 781), (690, 800), (673, 781))]
     for k in range(4):
         m = (k + 1) % 4
-        diamond.faces.new((o[k], o[m], i_[m], i_[k]))
-    extruded = bmesh.ops.extrude_face_region(diamond, geom=list(diamond.faces))
+        ring.faces.new((o[k], o[m], i_[m], i_[k]))
+    extruded = bmesh.ops.extrude_face_region(ring, geom=list(ring.faces))
     moved = [g for g in extruded["geom"] if isinstance(g, bmesh.types.BMVert)]
-    bmesh.ops.translate(diamond, vec=(0, -0.016, 0), verts=moved)
-    scarf_pieces = [
-        (with_material(band, 0), (0, 0.02, 0.615), (0, 0, math.pi / 8)),
-        (with_material(prism_bm([(-0.33, 0.665), (0.33, 0.665), (0.0, 0.405)], 0.07), 0), (0, -0.315, 0), (0, 0, 0)),
-        (with_material(diamond, 1), (0, -0.352, 0.555), (0, 0, 0)),
-        (with_material(box_bm((0.075, 0.035, 0.1), 0.008), 2), (0.315, -0.285, 0.515), (0, 0.25, 0)),
-    ]
-    for lx, lz, rot in ((-0.42, 0.52, 0.6), (-0.47, 0.44, 0.95)):
-        end = prism_bm([(-0.06, 0.08), (0.08, 0.06), (0.03, -0.12), (-0.07, -0.08)], 0.04)
-        scarf_pieces.append((with_material(end, 0), (lx, 0.12, lz), (0.2, rot, 0.5)))
-    scarf_at = Vector((0, 0, 0.6))
-    node("Scarf", centred(merge_bms("Scarf", scarf_pieces, [K, T, S]), scarf_at), scarf_at, body, BODY_AT)
+    bmesh.ops.translate(ring, vec=(0, -7 * S, 0), verts=moved)
+    pieces.append((paint(ring, TEAL), Vector((0, D(-30), 0))))
+    for bar in ((816, 825, 730, 796), (850, 859, 730, 796), (816, 859, 730, 739), (816, 859, 787, 796), (835, 840, 745, 781)):
+        bm, c = px_box(bar[0], bar[1], bar[2], bar[3], -38, -28, bevel_px=2)
+        pieces.append((paint(bm, SILVER), c))
+    for outline, y in (
+        ([(546, 733), (504, 742), (480, 802), (521, 834), (550, 792)], 40),
+        ([(560, 762), (522, 788), (531, 848), (566, 822)], 95),
+    ):
+        bm, c = plate(outline, y, 26, bevel_px=4)
+        pieces.append((paint(bm, BLACK), c))
+    node("Scarf", merge("Scarf", pieces, palette, scarf_at), scarf_at, body, BODY_AT)
 
-    # Tail: a chunky curl of faceted segments, plus floating cubes ----------------
+    # Tail: one chunky faceted curl. Black near her body with a teal band, a teal
+    # fin on top, and a teal face at the tip.
     tail = node("Tail", None, TAIL_AT, body, BODY_AT)
-    path = [
-        (0.30, 0.26, 0.21), (0.52, 0.32, 0.19), (0.75, 0.34, 0.23),
-        (0.95, 0.31, 0.34), (1.06, 0.26, 0.5), (1.1, 0.21, 0.67),
-    ]
-    sizes = [0.28, 0.27, 0.25, 0.22, 0.19, 0.15]
-    for k, (point, size) in enumerate(zip(path, sizes)):
-        before = Vector(path[max(k - 1, 0)])
-        after = Vector(path[min(k + 1, len(path) - 1)])
-        direction = (after - before).normalized()
-        bm = box_bm((size * 1.25, size * 0.95, size), bevel=size * 0.12)
-        bm.normal_update()
-        for face in bm.faces:
-            if k in (1, 4) and face.normal.z > 0.5:
-                face.material_index = 1  # teal accent on top
-            if k == 0 and face.normal.y < -0.5:
-                face.material_index = 2  # black accent near the body
-        angle = math.atan2(direction.z, direction.x)
-        node(f"TailSeg{k}", finish_mesh(f"TailSeg{k}", bm, [W, T, K]), point, tail, TAIL_AT, (0, -angle, 0.1 * k))
+    path = [P(860, 830, 185), P(960, 845, 190), P(1060, 845, 190), P(1140, 815, 180), P(1180, 760, 170), P(1186, 688, 160)]
+    heights = [x * S for x in (150, 160, 160, 140, 118, 92)]
+    depths = [x * S for x in (140, 148, 146, 128, 108, 82)]
+    # One continuous faceted tube (no joints), teal on the tip's outer faces.
+    bm = tube_bm(path, heights, depths, sides=7, twist=0.25)
+    paint(bm, WHITE)
+    paint(bm, TEAL, lambda f: f.calc_center_median().x > X(1158) and f.normal.x > 0.45)
+    pieces = [(bm, Vector((0, 0, 0)))]
+    bm, c = plate([(1030, 755), (1098, 690), (1114, 700), (1068, 762)], 140, 26, bevel_px=3)
+    pieces.append((paint(bm, TEAL), c))
+    # The scarf's long end hanging down behind her right hip: black, teal edge.
+    bm, c = plate([(856, 745), (962, 758), (1000, 792), (996, 896), (936, 868), (846, 802)], 60, 40, bevel_px=5)
+    pieces.append((paint(bm, BLACK), c))
+    bm, c = plate([(968, 788), (1010, 792), (1006, 900), (982, 900)], 56, 44, bevel_px=3)
+    pieces.append((paint(bm, TEAL), c))
+    node("TailMesh", merge("TailMesh", pieces, palette, TAIL_AT), TAIL_AT, tail, TAIL_AT)
 
     cubes = node("Cubes", None, (0, 0, 0), root)
-    for k, (loc, size) in enumerate(
-        (((1.16, 0.14, 0.98), 0.075), ((1.27, 0.14, 0.84), 0.06), ((1.05, 0.1, 1.1), 0.045), ((1.32, 0.2, 1.02), 0.035))
-    ):
-        node(f"Cube{k}", box(f"Cube{k}", (size,) * 3, T, bevel=size * 0.08), loc, cubes, (0, 0, 0), (0.3 * k, 0.5, 0.2 * k))
+    for k, (cx, cz, size) in enumerate(((1216, 613, 50), (1241, 690, 36))):
+        bm = box_bm((size * S,) * 3, size * S * 0.07)
+        node(f"Cube{k}", merge(f"Cube{k}", [(paint(bm, GLOW), Vector((0, 0, 0)))], palette, (0, 0, 0)),
+             P(cx, cz, 40), cubes, (0, 0, 0), (0.12, 0.3 + 0.2 * k, 0.1))
 
-    # Head -------------------------------------------------------------------------
+    # Head --------------------------------------------------------------------------
     look = node("LookPivot", None, NECK_AT, root)
-    # A low, wide hair mass on a rounded block, not a hat.
-    cap = box_bm((1.2, 1.06, 0.34), bevel=0.08)
-    for v in cap.verts:
-        if v.co.z > 0.1:
-            v.co.x *= 0.95
-            v.co.y *= 0.95
-    head_pieces = [
-        (with_material(box_bm((1.0, 0.86, 0.9), 0.06), 0), (0, 0.02, 1.08), (0, 0, 0)),
-        (with_material(cap, 0), (0, 0.03, 1.45), (0, 0, 0)),
-        (with_material(box_bm((1.18, 0.5, 0.82), 0.08), 0), (0, 0.27, 1.12), (0, 0, 0)),
-    ]
-    # Bangs: layered shards hanging from the hairline, tips tilted forward so their
-    # facets catch the light like the render's hair. Outlines hang below z=0.
-    hairline = 1.62
-    head_pieces.append((with_material(prism_bm([(-0.6, 0), (0.56, 0), (0.56, -0.2), (-0.6, -0.2)], 0.09, taper=0.9), 0), (0, -0.53, hairline), (0, 0, 0)))
-    for k, (outline, tilt, turn) in enumerate((
-        ([(-0.62, 0.0), (-0.22, 0.0), (-0.52, -0.64)], 0.16, 0.05),
-        ([(-0.42, 0.0), (0.0, 0.0), (-0.17, -0.55)], 0.2, -0.04),
-        ([(-0.1, 0.0), (0.32, 0.0), (0.06, -0.5)], 0.18, 0.06),
-        ([(0.12, 0.0), (0.55, 0.0), (0.38, -0.6)], 0.14, -0.05),
-        ([(-0.24, 0.0), (0.16, 0.0), (-0.04, -0.4)], 0.24, 0.0),
-    )):
-        bm = with_material(prism_bm(outline, 0.1, taper=0.72), 0)
-        head_pieces.append((bm, (0, -0.56 - 0.02 * (k % 3), hairline), (-tilt, 0, turn)))
-    # Side locks: white on her right (viewer's left) with a teal underside; the long
-    # teal streak on her left (viewer's right), with white locks behind it.
-    for outline, depth, y, front, sides in (
-        ([(-0.66, 1.46), (-0.44, 1.46), (-0.5, 0.55), (-0.7, 0.78)], 0.3, -0.24, 0, 1),
-        ([(-0.72, 1.36), (-0.56, 1.36), (-0.74, 0.62)], 0.34, -0.06, 1, 0),
-        ([(0.3, 1.5), (0.56, 1.46), (0.5, 0.56), (0.36, 0.86)], 0.12, -0.42, 1, 1),
-        ([(0.5, 1.44), (0.7, 1.42), (0.72, 0.6), (0.52, 0.78)], 0.3, -0.22, 0, 1),
+    pieces = []
+    bm, c = px_box(482, 902, 335, 715, -70, 360, bevel_px=16)  # the face block
+    pieces.append((paint(bm, WHITE), c))
+    # Hair cap: its top face shows because the camera looks down ~6 degrees, so the
+    # back edge appears ~40 px higher than the front (master: 290 back, 340 front).
+    bm, c = px_box(470, 910, 326, 352, -84, 372, bevel_px=10)
+    pieces.append((paint(bm, WHITE), c))
+    bm, c = px_box(470, 910, 330, 722, 250, 382, bevel_px=12)  # back hair
+    pieces.append((paint(bm, WHITE), c))
+    # Bangs: layered flat strands with straight cuts, tips just above and between the eyes.
+    bm, c = plate([(468, 330), (912, 330), (912, 372), (468, 372)], -92, 16, bevel_px=4)
+    pieces.append((paint(bm, WHITE), c))
+    for outline, y, tilt in (
+        ([(478, 335), (650, 335), (564, 457), (473, 589)], -96, 0.05),
+        ([(640, 335), (760, 335), (765, 611), (645, 557)], -94, 0.04),
+        ([(745, 335), (892, 335), (895, 576), (745, 495)], -98, 0.06),
+        ([(598, 335), (700, 335), (654, 598), (566, 455)], -104, 0.07),
     ):
-        bm = with_material(prism_bm(outline, depth, taper=0.9), front)
-        mark_side_faces(bm, sides)
-        head_pieces.append((bm, (0, y, 0), (0, 0, 0)))
-    head = node("Head", centred(merge_bms("Head", head_pieces, [W, T]), NECK_AT), NECK_AT, look, NECK_AT)
+        bm, c = plate(outline, y, 22, bevel_px=4, tilt=tilt)
+        pieces.append((paint(bm, WHITE), c))
+    # Her right side (viewer's left): big white flares with a teal strand underneath.
+    for outline, y, thick, material, tilt in (
+        ([(476, 452), (362, 486), (366, 566), (428, 656), (476, 566)], -40, 90, TEAL, 0.0),
+        ([(486, 333), (442, 330), (318, 452), (372, 522), (480, 470)], -82, 70, WHITE, 0.12),
+        ([(470, 396), (390, 430), (312, 560), (402, 548), (476, 470)], -70, 60, WHITE, -0.1),
+        ([(476, 540), (400, 560), (322, 612), (398, 640), (470, 600)], -60, 50, WHITE, 0.06),
+        ([(484, 470), (408, 556), (444, 700), (470, 772), (486, 690)], -86, 70, WHITE, 0.08),
+        ([(482, 560), (430, 600), (452, 740), (480, 700)], -96, 40, WHITE, 0.15),
+        ([(470, 500), (380, 562), (398, 700), (448, 762)], 20, 150, WHITE, 0.0),
+    ):
+        bm, c = plate(outline, y, thick, bevel_px=5, taper=0.92, tilt=tilt)
+        pieces.append((paint(bm, material), c))
+    # Her left side (viewer's right): white locks under a broad diagonal teal band.
+    for outline, y, thick, material in (
+        ([(900, 340), (980, 420), (1046, 560), (1040, 772), (992, 722), (930, 560)], -60, 180, WHITE),
+        ([(905, 520), (1000, 600), (1030, 782), (962, 742)], 40, 160, WHITE),
+        ([(944, 600), (1004, 600), (998, 742), (970, 742)], -70, 50, TEAL),
+        ([(778, 333), (862, 333), (1020, 560), (1016, 618), (940, 606)], -106, 24, TEAL),
+    ):
+        bm, c = plate(outline, y, thick, bevel_px=5)
+        pieces.append((paint(bm, material), c))
+    head = node("Head", merge("Head", pieces, palette, NECK_AT), NECK_AT, look, NECK_AT)
 
-    # Face details: separate nodes so the app can animate them.
-    for side, eye, pupil, cheek in ((-1, "EyeL", "PupilL", "CheekL"), (1, "EyeR", "PupilR", "CheekR")):
-        eye_at = Vector((0.27 * side, -0.44, 0.94))
-        eye_obj = node(eye, box(eye, (0.165, 0.03, 0.25), K, bevel=0.025), eye_at, head, NECK_AT)
-        node(pupil, box(pupil, (0.034, 0.02, 0.115), A), eye_at + Vector((0, -0.012, 0)), eye_obj, eye_at)
-        plus = merge_bms(
-            cheek,
-            [
-                (box_bm((0.08, 0.016, 0.022)), (0, 0, 0), (0, 0, 0)),
-                (box_bm((0.022, 0.016, 0.08)), (0, 0, 0), (0, 0, 0)),
-            ],
-            [T],
-        )
-        node(cheek, plus, (0.465 * side, -0.445, 0.79), head, NECK_AT)
+    # Face details, kept as separate nodes so the app can animate them.
+    for side, eye, pupil, cheek in (("L", "EyeL", "PupilL", "CheekL"), ("R", "EyeR", "PupilR", "CheekR")):
+        ex = 572.5 if side == "L" else 810
+        eye_at = P(ex, 620.8, -74)
+        bm = box_bm((70 * S, 8 * S, 110.4 * S), 8 * S)
+        eye_obj = node(eye, merge(eye, [(paint(bm, BLACK), Vector((0, 0, 0)))], palette, (0, 0, 0)), eye_at, head, NECK_AT)
+        pupil_at = P(ex + 0.5, 632.75, -80)
+        bm = box_bm((22 * S, 5 * S, 59.5 * S), 3 * S)
+        node(pupil, merge(pupil, [(paint(bm, AMBER), Vector((0, 0, 0)))], palette, (0, 0, 0)), pupil_at, eye_obj, eye_at)
+        cx = 498 if side == "L" else 879
+        cheek_at = P(cx, 666, -73)
+        pieces = []
+        for size in ((41, 5, 12), (12, 5, 41)):
+            bm = box_bm(tuple(v * S for v in size), 2 * S)
+            pieces.append((paint(bm, TEAL), Vector((0, 0, 0))))
+        node(cheek, merge(cheek, pieces, palette, (0, 0, 0)), cheek_at, head, NECK_AT)
 
-    # The top strand (ahoge): a flat white blade curving to her left, teal tip.
-    base = Vector((0, 0.02, 1.6))
-    points = [(0.0, 0.02, 1.6), (0.01, 0.01, 1.71), (0.04, -0.01, 1.81), (0.1, -0.03, 1.88), (0.19, -0.05, 1.91), (0.28, -0.06, 1.88)]
-    bm = loft_bm(points, [0.17, 0.16, 0.15, 0.14, 0.12, 0.08], [0.045, 0.04, 0.035, 0.03, 0.026, 0.02])
-    for face in bm.faces:
-        if face.calc_center_median().x > 0.14:
-            face.material_index = 1
-    node("Ahoge", centred(finish_mesh("Ahoge", bm, [W, T]), base), base, head, NECK_AT)
+    # The top strand (ahoge): a flat white blade rising and curving to her left,
+    # with a teal upper face near the tip.
+    base = P(676, 342, 60)
+    points = [P(680, 342, 60), P(692, 286, 60), P(708, 236, 60), P(735, 196, 60), P(770, 160, 60), P(806, 128, 60)]
+    bm = loft_bm(points, [x * S for x in (70, 66, 62, 56, 46, 30)], [20 * S] * 6)
+    paint(bm, WHITE)
+    paint(bm, TEAL, lambda f: f.calc_center_median().x > X(758))
+    node("Ahoge", merge("Ahoge", [(bm, Vector((0, 0, 0)))], palette, base), base, head, NECK_AT)
 
-    # The bow on her left side: black loops with teal edges.
-    bow_at = Vector((0.55, 0.06, 1.42))
-    bow_pieces = []
+    # The bow: three blocky black lobes with teal outer faces.
+    bow_at = P(952, 390, 150)
+    pieces = []
+    bm, c = px_box(918, 986, 350, 430, 100, 200, bevel_px=8)
+    pieces.append((paint(bm, BLACK), c))
     for outline in (
-        [(0.0, 0.02), (0.3, 0.22), (0.37, 0.05), (0.05, -0.04)],
-        [(0.0, -0.03), (0.07, -0.07), (0.38, -0.32), (0.3, -0.39)],
+        [(915, 405), (930, 268), (1012, 248), (1010, 330), (985, 408)],
+        [(955, 340), (1100, 312), (1126, 412), (960, 428)],
+        [(950, 402), (1082, 455), (1130, 552), (1086, 572), (940, 452)],
     ):
-        bm = with_material(prism_bm(outline, 0.18, taper=0.9), 0)
-        mark_side_faces(bm, 1)
-        bow_pieces.append((bm, bow_at, (0, 0.1, -0.3)))
-    bow_pieces.append((with_material(box_bm((0.12, 0.16, 0.14), 0.02), 0), bow_at, (0, 0, 0)))
-    node("Bow", centred(merge_bms("Bow", bow_pieces, [K, T]), bow_at), bow_at, head, NECK_AT)
+        bm, c = plate(outline, 90, 120, bevel_px=7, taper=0.94, yaw=0.45)
+        paint(bm, BLACK)
+        paint(bm, TEAL, lambda f: f.normal.x > 0.45)
+        pieces.append((bm, c))
+    node("Bow", merge("Bow", pieces, palette, bow_at), bow_at, head, NECK_AT)
 
-    # The white cross clip on the teal streak.
-    clip_at = Vector((0.43, -0.49, 1.2))
-    clip = merge_bms(
-        "Clip",
-        [
-            (box_bm((0.15, 0.03, 0.045), 0.008), clip_at, (0, 0.785, 0)),
-            (box_bm((0.15, 0.03, 0.045), 0.008), clip_at, (0, -0.785, 0)),
-        ],
-        [W],
-    )
-    node("Clip", centred(clip, clip_at), clip_at, head, NECK_AT)
+    # The white cross clip on the teal band.
+    clip_at = P(945, 487, -112)
+    pieces = []
+    for angle in (math.pi / 4, -math.pi / 4):
+        bm = box_bm((74 * S, 14 * S, 22 * S), 4 * S)
+        bm.transform(Euler((0, angle, 0)).to_matrix().to_4x4())
+        pieces.append((paint(bm, WHITE), Vector((0, 0, 0))))
+    node("Clip", merge("Clip", pieces, palette, (0, 0, 0)), clip_at, head, NECK_AT)
     return root
 
 
@@ -394,33 +463,54 @@ def look_at(obj, target):
     obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
 
 
-def render_previews(out_dir):
+def setup_render(width, height, transparent):
     scene = bpy.context.scene
-    os.makedirs(out_dir, exist_ok=True)
     scene.render.engine = "BLENDER_WORKBENCH"
     shading = scene.display.shading
     shading.light = "STUDIO"
     shading.color_type = "MATERIAL"
-    shading.show_shadows = True
+    shading.show_shadows = False
     shading.show_cavity = True
-    scene.render.resolution_x, scene.render.resolution_y = 720, 540
-    scene.render.film_transparent = False
+    scene.render.resolution_x, scene.render.resolution_y = width, height
+    scene.render.resolution_percentage = 100
+    scene.render.film_transparent = transparent
     if scene.world is None:
         scene.world = bpy.data.worlds.new("bg")
     scene.world.color = linear_rgba("#E8DCD2")[:3]
     shading.background_type = "WORLD"
-    cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
-    cam.data.lens = 85
-    scene.collection.objects.link(cam)
-    scene.camera = cam
-    for name, location in (
-        ("front", (0.0, -7.6, 1.6)),
-        ("three_quarter", (2.8, -7.0, 1.9)),
-        ("side", (7.6, 0.0, 1.4)),
-        ("back", (-1.5, 7.4, 1.6)),
-    ):
+    return scene
+
+
+def camera(name, ortho_scale=None, lens=85):
+    cam = bpy.data.objects.new(name, bpy.data.cameras.new(name))
+    if ortho_scale:
+        cam.data.type = "ORTHO"
+        cam.data.ortho_scale = ortho_scale
+    else:
+        cam.data.lens = lens
+    bpy.context.scene.collection.objects.link(cam)
+    bpy.context.scene.camera = cam
+    return cam
+
+
+def render_compare(path):
+    """Front view framed like the master: 1 px of the render = 1 px of the master."""
+    scene = setup_render(MASTER_W, MASTER_H, transparent=True)
+    cam = camera("compare", ortho_scale=MASTER_W * S)
+    target = P(MASTER_W / 2, MASTER_H / 2, 0)
+    cam.location = target + Vector((0, -math.cos(CAMERA_PITCH), math.sin(CAMERA_PITCH))) * 20
+    look_at(cam, target)
+    scene.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+
+
+def render_previews(out_dir):
+    os.makedirs(out_dir, exist_ok=True)
+    scene = setup_render(720, 540, transparent=False)
+    cam = camera("preview", lens=85)
+    for name, location in (("three_quarter", (3.0, -7.0, 2.0)), ("side", (7.8, 0.4, 1.4)), ("back", (-1.5, 7.6, 1.7))):
         cam.location = location
-        look_at(cam, (0.25, 0, 1.0))
+        look_at(cam, (0.25, 0.3, 1.0))
         scene.render.filepath = os.path.join(out_dir, f"grace-{name}.png")
         bpy.ops.render.render(write_still=True)
 
@@ -430,16 +520,18 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", required=True)
     parser.add_argument("--render")
+    parser.add_argument("--compare")
     parser.add_argument("--blend")
     args = parser.parse_args(argv)
 
     clear_scene()
     materials = {
-        "white": make_material("white", PALETTE["white"], roughness=0.65),
-        "teal": make_material("teal", PALETTE["teal"], roughness=0.5),
-        "black": make_material("black", PALETTE["black"], roughness=0.55),
-        "amber": make_material("amber", PALETTE["amber"], roughness=0.4, emission=0.7),
-        "silver": make_material("silver", PALETTE["silver"], roughness=0.35, metallic=0.7),
+        "white": make_material("white", PALETTE["white"], roughness=0.55),
+        "teal": make_material("teal", PALETTE["teal"], roughness=0.45),
+        "black": make_material("black", PALETTE["black"], roughness=0.6),
+        "amber": make_material("amber", PALETTE["amber"], roughness=0.4, emission=0.6),
+        "silver": make_material("silver", PALETTE["silver"], roughness=0.35, metallic=0.6),
+        "glow": make_material("glow", PALETTE["glow"], roughness=0.4, emission=0.25),
     }
     build(materials)
     bpy.context.view_layer.update()
@@ -456,6 +548,8 @@ def main():
     )
     if args.blend:
         bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(args.blend))
+    if args.compare:
+        render_compare(os.path.abspath(args.compare))
     if args.render:
         render_previews(os.path.abspath(args.render))
     print("Grace built:", os.path.abspath(args.out))

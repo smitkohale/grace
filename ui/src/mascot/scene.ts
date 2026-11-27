@@ -9,14 +9,18 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  NeutralToneMapping,
   type Object3D,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
+  PMREMGenerator,
   Scene,
   SRGBColorSpace,
   Vector3,
   WebGLRenderer,
 } from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import {
   approach,
@@ -60,11 +64,22 @@ export async function createGraceScene(
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = SRGBColorSpace;
+  // Soft, true-to-colour studio look like the master render.
+  renderer.toneMapping = NeutralToneMapping;
+  renderer.toneMappingExposure = 0.88;
 
   const scene = new Scene();
-  const camera = new PerspectiveCamera(21, 1, 0.1, 50);
-  camera.position.set(1.0, 1.4, 7.7);
-  const target = new Vector3(0.3, 0.95, 0);
+  // Same view as the master render: straight on, looking down about 6 degrees,
+  // with a long lens so the boxes stay boxy.
+  const camera = new PerspectiveCamera(16, 1, 0.1, 50);
+  const target = new Vector3(0.21, 1.0, -0.36);
+  const pitch = (6.3 * Math.PI) / 180;
+  const distance = 9.3;
+  camera.position.set(
+    target.x,
+    target.y + Math.sin(pitch) * distance,
+    target.z + Math.cos(pitch) * distance,
+  );
   camera.lookAt(target);
 
   // A soft contact shadow so she stands on the card instead of floating.
@@ -80,7 +95,7 @@ export async function createGraceScene(
     paint.fillRect(0, 0, 128, 128);
   }
   const shadow = new Mesh(
-    new PlaneGeometry(2.1, 1.0),
+    new PlaneGeometry(2.7, 1.2),
     new MeshBasicMaterial({
       map: new CanvasTexture(shadowCanvas),
       transparent: true,
@@ -88,16 +103,39 @@ export async function createGraceScene(
     }),
   );
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.set(0.35, 0.002, 0.1);
+  shadow.position.set(0.3, 0.002, -0.36);
   scene.add(shadow);
 
-  scene.add(new HemisphereLight(0xfffbf7, 0xc9b9ab, 2.2));
-  const key = new DirectionalLight(0xffffff, 1.9);
-  key.position.set(-2.5, 4, 5);
+  // Lighting like the master render: a soft studio room for reflections, warm
+  // light from above with peach-toned shadows, and a strong key from the upper
+  // left that casts soft shadows (bangs on the face, head on the scarf).
+  const pmrem = new PMREMGenerator(renderer);
+  const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = environment;
+  scene.environmentIntensity = 0.25;
+  scene.add(new HemisphereLight(0xfff4ec, 0xa88a7c, 0.5));
+  // From above and to the left: tops brightest, fronts a little darker, her
+  // left-hand sides in warm shadow, as in the master render.
+  const key = new DirectionalLight(0xfff1e6, 3.0);
+  key.position.set(-3, 7, 4);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.bias = -0.0004;
+  key.shadow.normalBias = 0.02;
+  key.shadow.radius = 4;
+  const bounds = key.shadow.camera;
+  bounds.left = -1.6;
+  bounds.right = 1.9;
+  bounds.top = 2.2;
+  bounds.bottom = -0.6;
+  bounds.near = 0.5;
+  bounds.far = 20;
   scene.add(key);
-  const rim = new DirectionalLight(0xfff3e6, 0.9);
-  rim.position.set(3.5, 2.5, -3);
-  scene.add(rim);
+  const fill = new DirectionalLight(0xffe9dd, 0.5);
+  fill.position.set(5, 1.5, 4);
+  scene.add(fill);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFSoftShadowMap;
 
   const gltf = await new GLTFLoader().loadAsync(options.modelUrl);
   const model = gltf.scene;
@@ -105,6 +143,8 @@ export async function createGraceScene(
   model.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const material of materials) {
       if (material instanceof MeshStandardMaterial) {
@@ -126,7 +166,9 @@ export async function createGraceScene(
   const arms = [find("ArmL"), find("ArmR")];
   const ahoge = find("Ahoge");
   const tail = find("Tail");
-  const cubes = [0, 1, 2, 3].map((k) => find(`Cube${k}`));
+  // However many floating cubes the model has (the master render shows two).
+  const cubes: Object3D[] = [];
+  for (let k = 0; model.getObjectByName(`Cube${k}`); k++) cubes.push(find(`Cube${k}`));
   const cubeHome = cubes.map((cube) => cube.position.clone());
   const pupilHome = pupils.map((pupil) => pupil.position.clone());
   const ahogeHome = ahoge.rotation.z;
@@ -261,14 +303,15 @@ export async function createGraceScene(
     cubes.forEach((cube, k) => {
       const home = cubeHome[k] as Vector3;
       if (pose.cubes === "orbit") {
-        const angle = time * 1.4 + (k * Math.PI) / 2;
+        // Circling her head while she thinks.
+        const angle = time * 1.4 + (k * 2 * Math.PI) / cubes.length;
         cube.position.set(
-          0.15 + Math.cos(angle) * 0.95,
-          1.15 + 0.12 * Math.sin(angle * 2),
-          Math.sin(angle) * 0.95,
+          Math.cos(angle) * 0.95,
+          1.15 + 0.1 * Math.sin(angle * 2),
+          -0.35 + Math.sin(angle) * 0.85,
         );
       } else if (pose.cubes === "rest") {
-        cube.position.set(home.x - 0.1 + k * 0.03, 0.04 + k * 0.01, home.z + 0.3);
+        cube.position.set(home.x - 0.05 * k, 0.05, home.z + 0.1 * k);
       } else {
         cube.position.set(home.x, home.y + 0.03 * Math.sin(time * 1.3 + k * 1.7), home.z);
       }
