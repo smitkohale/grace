@@ -31,13 +31,18 @@ Grace carries your context to every AI, proves your rules reached each one, and 
 
 ## Commands
 
-Confirm these in M0 and update them if the setup changes.
+Confirmed in M0 (CI runs the same; see `.github/workflows/ci.yml`).
 
-- Rust checks: `cargo fmt --all --check && cargo clippy --all-targets -- -D warnings && cargo test --workspace`
-- UI checks: `pnpm install`, then `pnpm -C ui lint && pnpm -C ui test`
-- Desktop app (dev): `pnpm -C app tauri dev`
-- CLI: `cargo run -p grace-cli -- --help`
-- Web UI without the desktop app: `cargo run -p grace-cli -- serve`
+- **Rust checks** (engine and CLI): `cargo fmt --all --check && cargo clippy -p grace-core -p grace-cli --all-targets -- -D warnings && cargo test`
+- **Desktop app check:** `pnpm -C ui build`, then `cargo clippy -p grace-app -- -D warnings`. Linux also needs WebKitGTK.
+- **UI checks:** `pnpm install`, then `pnpm -C ui lint && pnpm -C ui test`
+- **End-to-end:** `cargo build -p grace-cli && pnpm -C ui build && pnpm -C ui e2e`. Locally it uses the installed Edge.
+- **Desktop app (dev):** `pnpm -C app tauri dev`
+- **CLI:** `cargo run -p grace-cli -- --help`
+- **Web UI without the desktop app:** `pnpm -C ui build`, then `cargo run -p grace-cli -- serve --open`
+- **Mascot model:** `blender -b --factory-startup -P assets/brand/mascot/build_grace.py -- --out assets/brand/mascot/grace.glb`. Add `--compare FILE` for a front view aligned to the master render.
+- **Mascot stills and app icon:** `pnpm -C ui build && node ui/scripts/render-stills.mjs`, then `pnpm -C app tauri icon ../assets/brand/mascot/renders/grace-icon-1024.png --output src-tauri/icons`
+- **Licenses (R16):** `node scripts/check-licenses.mjs`. CI also runs `cargo deny check licenses`.
 
 ## Working agreement
 
