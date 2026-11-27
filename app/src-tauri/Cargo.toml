@@ -1,0 +1,25 @@
+[package]
+name = "grace-app"
+description = "Grace's desktop app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "grace-app"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+grace-core = { path = "../../crates/grace-core", features = ["server"] }
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["net"] }
+
+[lints]
+workspace = true

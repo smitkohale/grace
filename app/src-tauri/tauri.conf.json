@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Grace",
+  "version": "0.0.1",
+  "identifier": "app.grace.desktop",
+  "build": {
+    "frontendDist": "../../ui/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm -C ../ui dev",
+    "beforeBuildCommand": "pnpm -C ../ui build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Grace",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:*; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "dmg", "appimage", "deb"],
+    "category": "DeveloperTool",
+    "shortDescription": "Write your rules once. Grace carries them to every AI.",
+    "longDescription": "Grace is a local-first companion for people who work with many AIs. It finds your AI sessions, proves your rules reached each AI, and shows where any rule got lost. Free, no account, no telemetry.",
+    "license": "Apache-2.0",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": { "installMode": "currentUser" }
+    }
+  }
+}
