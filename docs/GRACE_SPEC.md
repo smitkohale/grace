@@ -507,7 +507,7 @@ Local-first means there is almost nothing to deploy: users run Grace on their ow
 | `grace` CLI binary | ≤ 15 MB |
 | Hook run time (p95) | ≤ 30 ms |
 | App idle in the tray | ≤ 60 MB RAM |
-| App with window open | ≤ 200 MB RAM |
+| App with window open | ≤ 250 MB RAM. Raised from 200 MB on 2026-11-27 so live 3D Grace fits: WebView2 alone uses about 170 MB, and live Grace adds about 45 MB while she's on screen. |
 | App cold start | ≤ 1 s to first screen |
 | UI navigation | ≤ 100 ms |
 | 100 MB transcript | parsed in ≤ 10 s |
@@ -603,4 +603,4 @@ Local-first means there is almost nothing to deploy: users run Grace on their ow
 - Name on registries: `grace-ai` or `getgrace`?
 - When to apply for free Windows signing (after the first public releases).
 
-Decided on 2026-11-27: license Apache-2.0; public repo `smitkohale/grace`; website on GitHub Pages instead of a paid domain; the free code-signing path in section 10; the mascot's poses come from Grace's own 3D model built in M0 (`assets/brand/mascot/`).
+Decided on 2026-11-27: license Apache-2.0; public repo `smitkohale/grace`; website on GitHub Pages instead of a paid domain; the free code-signing path in section 10; the mascot's poses come from Grace's own 3D model built in M0 (`assets/brand/mascot/`); the window-open RAM budget is 250 MB, so live 3D Grace fits.

@@ -15,6 +15,8 @@
 
 - **Mascot is a live, interactive 3D model** (maintainer, 2026-11-27). Replaces DESIGN.md's "CSS only, no live 3D". Only a 2D render exists, so the model is built by script in Blender (`grace.blend` -> `grace.glb`, flat colours, target under 300 KB) and drawn with three.js. Small sizes use still renders of the same model. Update DESIGN.md and spec budgets in the same change.
 
+- **Window RAM budget raised to 250 MB** (maintainer, 2026-11-27), so live 3D Grace fits. WebView2 alone uses about 170 MB, and live Grace adds about 45 MB while she's on screen. Spec §11 updated.
+
 - **Free to build, ship and use** (maintainer, 2026-11-27): permissive open-source dependencies only, free CI and hosting, no paid services. New rule R16 in AGENTS.md; spec §4 principle 9.
 - **Made with the M0 plan (2026-11-27):**
   - public repo `smitkohale/grace`, created at the end of M0 after one more check with the maintainer;
@@ -86,7 +88,7 @@ Tasks 7–8, desktop app and CI, done:
   - 215 MB with live 3D Grace on screen;
   - 207 MB on Sessions after onboarding;
   - the engine itself uses 4–10 MB.
-  - The budget is 200 MB (open question below). Measuring also found three GPU-memory leaks in the mascot, now fixed.
+  - All within the 250 MB budget, raised from 200 MB by the maintainer so live 3D Grace fits. Measuring also found three GPU-memory leaks in the mascot, now fixed.
 - CI (`.github/workflows/ci.yml`) is green on Windows, macOS and Linux:
   - engine and CLI checks;
   - UI lint, tests and build;
@@ -116,10 +118,9 @@ One piece at a time; nothing here is urgent. "Maintainer" marks the steps only y
 **Close M0**
 1. Maintainer: install the Windows build from the `v0.0.1` draft in a fresh Windows account. Done when the Sessions list is reached in under 2 minutes with no terminal. Also note how long the window takes to appear (budget 1 s).
 2. Maintainer: compare live Grace with the master render and point out any differences.
-3. Maintainer: decide the RAM budget for live 3D (open question below).
-4. Accessibility pass on the M0 screens: dark mode, 200% zoom, reduced motion, screen-reader labels. Keyboard-only is already covered by the end-to-end test.
-5. Publish `v0.0.1`. Then change the README's "Not ready to install yet" to a download link with the "Run anyway" and "Open Anyway" steps.
-6. Maintainer: apply for free Windows signing (SignPath Foundation) once a release is public.
+3. Accessibility pass on the M0 screens: dark mode, 200% zoom, reduced motion, screen-reader labels. Keyboard-only is already covered by the end-to-end test.
+4. Publish `v0.0.1`. Then change the README's "Not ready to install yet" to a download link with the "Run anyway" and "Open Anyway" steps.
+5. Maintainer: apply for free Windows signing (SignPath Foundation) once a release is public.
 
 **Before the private alpha (after M2)**
 - Website (Astro on GitHub Pages): an OS-detecting download button, the unsigned-installer steps, a privacy page.
@@ -140,9 +141,5 @@ To preview the web UI: `pnpm -C ui build`, then `cargo run -p grace-cli -- serve
 
 ## Open questions
 
-- **RAM budget with live 3D Grace.** The spec allows 200 MB with the window open.
-  - WebView2 alone uses about 170 MB on this machine for a plain screen.
-  - Live 3D Grace adds about 45 MB while she's on screen, and some of that stays afterwards.
-  - Options: raise the budget to 250 MB, or keep 200 MB and use stills instead of live 3D.
 - Name on registries: `grace-ai` or `getgrace`? (Not needed until the first published package.)
 - When to apply for free Windows signing (after the first public releases).
