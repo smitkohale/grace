@@ -6,6 +6,7 @@ import { ToolCard } from "../components/ToolCard";
 import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../lib/api";
+import { usePageTitle } from "../lib/usePageTitle";
 import { GraceMascot } from "../mascot/GraceMascot";
 import { t } from "../strings/en";
 
@@ -17,6 +18,7 @@ export function FindTools() {
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const [claudeChoice, setClaudeChoice] = useState<boolean | null>(null);
   const claudeEnabled = claudeChoice ?? config.data?.tools.claude_code?.enabled ?? true;
+  usePageTitle(t.tools.pageTitle);
 
   const finish = useMutation({
     mutationFn: async () => {
@@ -47,17 +49,23 @@ export function FindTools() {
       </div>
 
       <section className="mt-8" aria-busy={doctor.isPending}>
+        {/* One live region for the whole search, so the result is announced too. */}
+        <p className="mb-3 text-muted" role="status">
+          {doctor.isPending
+            ? t.tools.looking
+            : doctor.data
+              ? t.tools.foundCount(
+                  doctor.data.tools.filter((tool) => tool.found).length,
+                  doctor.data.tools.length,
+                )
+              : ""}
+        </p>
         {doctor.isPending && (
-          <>
-            <p className="mb-3 text-muted" role="status">
-              {t.tools.looking}
-            </p>
-            <div className="grid gap-4 md:grid-cols-2">
-              {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-32" />
-              ))}
-            </div>
-          </>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
         )}
         {doctor.isError && (
           <div role="alert" className="flex items-center gap-4">

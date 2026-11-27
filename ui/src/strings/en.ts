@@ -5,6 +5,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 export const en = {
   appName: "Grace",
+  pageTitle: (screen: string) => `${screen} · Grace`,
   skipToContent: "Skip to content",
   start: {
     unreachable:
@@ -27,14 +28,17 @@ export const en = {
     back: "Back",
   },
   welcome: {
+    pageTitle: "Hello",
     title: "Hi, I'm Grace.",
     body: "I keep your AIs on the same page. Setup takes about two minutes.",
     start: "Let's go",
   },
   tools: {
+    pageTitle: "Find your tools",
     title: "Let me look for the AI tools you use.",
     subtitle: "I only read files. Nothing on your computer changes.",
     looking: "Looking for your AI tools…",
+    foundCount: (found: number, total: number) => `Found ${found} of ${total} tools.`,
     found: "Found",
     notFound: "Not found",
     willRead: "I'll read",
@@ -69,6 +73,24 @@ export const en = {
       lastActive: "Last active",
       length: "Length",
     },
+    // What a screen reader says for one row, since the column headings are
+    // only visual (and hidden on narrow windows).
+    rowLabel: (row: {
+      title: string;
+      lastPrompt: string | null;
+      project: string | null;
+      lastActive: string;
+      length: string;
+    }) =>
+      [
+        row.title,
+        row.lastPrompt && `Last prompt: ${row.lastPrompt}`,
+        row.project && `Project: ${row.project}`,
+        `Last active ${row.lastActive}`,
+        row.length,
+      ]
+        .filter(Boolean)
+        .join(". "),
   },
   detail: {
     back: "All sessions",

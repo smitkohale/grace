@@ -1,5 +1,6 @@
 // Starts `grace serve` for end-to-end tests, against a throwaway home folder
-// (with a space in its name) holding one synthetic Claude Code session.
+// (with a space in its name) holding two synthetic Claude Code sessions, one
+// of them compacted.
 // Needs `cargo build -p grace-cli` and `pnpm build` first.
 import { spawn } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync } from "node:fs";
@@ -16,6 +17,10 @@ mkdirSync(join(root, "empty"));
 cpSync(
   join(repo, "tests", "fixtures", "claude_code", "basic.jsonl"),
   join(project, "11111111-1111-4111-8111-111111111111.jsonl"),
+);
+cpSync(
+  join(repo, "tests", "fixtures", "claude_code", "compaction.jsonl"),
+  join(project, "22222222-2222-4222-8222-222222222222.jsonl"),
 );
 
 const exe = join(repo, "target", "debug", process.platform === "win32" ? "grace.exe" : "grace");

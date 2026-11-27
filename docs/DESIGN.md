@@ -15,7 +15,14 @@ Grace's engine is sophisticated. Users should never feel that.
 5. **Safe defaults.** Private by default, no AI required, advanced options under "Advanced".
 6. **Calm, not noisy.** Notify only when action is needed, and never more than once per problem.
 7. **Fast feel.** Navigation under 100 ms. Slow work runs in the background while Grace shows her "thinking" state.
-8. **Accessible.** WCAG 2.2 AA: keyboard navigation, screen-reader labels, visible focus, colour never the only signal, reduced motion respected, usable at 200% zoom.
+8. **Accessible.** WCAG 2.2 AA:
+   - keyboard navigation, screen-reader labels and visible focus;
+   - colour is never the only signal;
+   - reduced motion is respected;
+   - usable at 200% zoom, with nothing scrolling sideways down to 320 px wide;
+   - every screen names itself in the window title ("Sessions · Grace").
+
+   `ui/e2e/accessibility.spec.ts` checks contrast, reflow, titles, the skip control and screen-reader labels on every screen, in light and dark.
 
 ---
 
@@ -46,7 +53,11 @@ Grace's engine is sophisticated. Users should never feel that.
 
 ## 3. Screens
 
-**Layout:** a sidebar (Home · Projects · Problems · Suggest an AI · Connections), the main area, and the Ask Grace drawer on the right. Minimum window 960 × 640.
+**Layout:**
+- A sidebar (Home · Projects · Problems · Suggest an AI · Connections), the main area, and the Ask Grace drawer on the right.
+- Minimum window 960 × 640.
+- On narrow windows, including the smallest one at 200% zoom, the sidebar becomes a top bar and tables stack into lines.
+- People can zoom the desktop window with Ctrl or Cmd and + or −.
 
 ### Home: "Where you left off"
 - Grace greets the user with today's status: "All rules reached your AIs today" or "1 thing needs a look".

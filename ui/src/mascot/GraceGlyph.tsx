@@ -17,7 +17,8 @@ export function GraceGlyph({ size = 28, title }: { size?: number; title?: string
         width="28"
         height="26"
         rx="5"
-        fill="var(--surface)"
+        // Her face stays light in dark mode too, so the black eyes still show.
+        fill="#FFFBF7"
         stroke="var(--teal-strong)"
         strokeWidth="2"
       />

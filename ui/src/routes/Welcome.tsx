@@ -1,12 +1,14 @@
 import { useLocation } from "wouter";
 import { OnboardingLayout } from "../components/OnboardingLayout";
 import { Button } from "../components/ui/button";
+import { usePageTitle } from "../lib/usePageTitle";
 import { GraceMascot } from "../mascot/GraceMascot";
 import { t } from "../strings/en";
 
 /** Onboarding step 1: Grace waves hello (DESIGN §2). */
 export function Welcome() {
   const [, navigate] = useLocation();
+  usePageTitle(t.welcome.pageTitle);
   return (
     <OnboardingLayout step={1} total={2}>
       <div className="grid items-center gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">

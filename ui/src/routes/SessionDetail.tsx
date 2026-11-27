@@ -22,6 +22,7 @@ import { Card } from "../components/ui/card";
 import { Skeleton } from "../components/ui/skeleton";
 import { ApiError, api, type BoundaryKind, type BoundaryRow, type EventKind } from "../lib/api";
 import { dateTime, relativeTime } from "../lib/time";
+import { usePageTitle } from "../lib/usePageTitle";
 import { t } from "../strings/en";
 
 const EVENT_ICON: Record<EventKind, LucideIcon> = {
@@ -76,9 +77,10 @@ export function SessionDetail({ id }: { id: number }) {
   const session = first?.session;
   const events = detail.data?.pages.flatMap((page) => page.events) ?? [];
   const notFound = detail.error instanceof ApiError && detail.error.status === 404;
+  usePageTitle(session ? (session.title ?? t.sessions.untitled) : undefined);
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
       <Link
         href="/sessions"
         className="inline-flex items-center gap-1 text-teal-strong hover:underline"
@@ -103,7 +105,7 @@ export function SessionDetail({ id }: { id: number }) {
       {session && first && (
         <>
           <header className="mt-4">
-            <h1 className="font-display text-3xl font-semibold tracking-tight">
+            <h1 className="font-display text-3xl font-semibold tracking-tight break-words">
               {session.title ?? t.sessions.untitled}
             </h1>
             <p className="mt-1 text-muted">
@@ -136,7 +138,7 @@ export function SessionDetail({ id }: { id: number }) {
                 const extra = boundaryDetail(boundary);
                 return (
                   <li key={`${boundary.kind}-${boundary.event_seq}-${boundary.line_no}`}>
-                    <Card className="flex items-center gap-3 px-4 py-3">
+                    <Card className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                       <Icon
                         className={
                           boundary.kind === "compaction"

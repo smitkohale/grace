@@ -20,7 +20,7 @@ export function ToolCard({
   const canRead = status.found && status.readable_now;
 
   return (
-    <Card className={cn("flex flex-col gap-3 p-4", !status.found && "opacity-80")}>
+    <Card className="flex flex-col gap-3 p-4">
       <article aria-labelledby={headingId} className="contents">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -41,7 +41,8 @@ export function ToolCard({
           <span
             className={cn(
               "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-              status.found ? "bg-teal/20 text-teal-strong" : "bg-line/60 text-muted",
+              // Light tints keep the small label at 4.5:1 or more (WCAG 1.4.3).
+              status.found ? "bg-teal/10 text-teal-strong" : "bg-line/60 text-muted",
             )}
           >
             {status.found ? (
