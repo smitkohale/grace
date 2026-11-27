@@ -6,7 +6,7 @@ members = ["crates/grace-core", "crates/grace-cli", "app/src-tauri"]
 default-members = ["crates/grace-core", "crates/grace-cli"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/smitkohale/grace"

@@ -1348,7 +1348,7 @@ dependencies = [
 
 [[package]]
 name = "grace-app"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "grace-core",
  "serde",
@@ -1359,7 +1359,7 @@ dependencies = [
 
 [[package]]
 name = "grace-cli"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -1372,7 +1372,7 @@ dependencies = [
 
 [[package]]
 name = "grace-core"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "axum",
