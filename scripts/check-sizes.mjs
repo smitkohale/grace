@@ -1,6 +1,6 @@
 // Size budgets from docs/GRACE_SPEC.md section 11.
 //   node scripts/check-sizes.mjs cli <path-to-grace-binary>     (15 MB)
-//   node scripts/check-sizes.mjs installers <target-dir>        (20 MB each)
+//   node scripts/check-sizes.mjs installers <target-dir>        (20 MB each; AppImage reported only)
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -33,7 +33,16 @@ if (mode === "cli") {
     console.error(`No installers found under ${path}`);
     process.exit(1);
   }
-  for (const file of found) ok = report(file, statSync(file).size, 20 * MB) && ok;
+  for (const file of found) {
+    const size = statSync(file).size;
+    if (file.endsWith(".AppImage")) {
+      // An AppImage carries its own copy of the Linux web engine (WebKitGTK),
+      // so the budget can't apply. Report it so growth stays visible.
+      console.log(`info ${(size / MB).toFixed(2).padStart(6)} MB  ${file} (bundles WebKitGTK; not budgeted)`);
+      continue;
+    }
+    ok = report(file, size, 20 * MB) && ok;
+  }
 } else {
   console.error("usage: check-sizes.mjs cli <binary> | installers <target-dir>");
   process.exit(2);

@@ -503,7 +503,7 @@ Local-first means there is almost nothing to deploy: users run Grace on their ow
 
 | What | Budget |
 |---|---|
-| Installer per OS | ≤ 20 MB |
+| Installer per OS (Windows NSIS, macOS `.dmg`, Linux `.deb`) | ≤ 20 MB. The `.AppImage` carries its own copy of the Linux web engine (WebKitGTK), about 80 MB, so it's reported but not budgeted. |
 | `grace` CLI binary | ≤ 15 MB |
 | Hook run time (p95) | ≤ 30 ms |
 | App idle in the tray | ≤ 60 MB RAM |
