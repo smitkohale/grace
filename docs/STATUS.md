@@ -110,7 +110,7 @@ Task 9, ship:
   | Linux `.AppImage` | 79.43 MB |
 
 - The AppImage carries its own copy of the Linux web engine, so it can't meet the 20 MB budget. Per R14, the spec and `check-sizes.mjs` now report it without budgeting it. The Linux job of the `v0.0.1` run still shows that size failure; the next tag will be green.
-- Tagged `v0.0.2` with the accessibility fixes and desktop zoom (below). Its draft release has the same four installers: Windows 3.87 MB, macOS 9.54 MB, `.deb` 4.73 MB and `.AppImage` 79.43 MB. Every job passed. It replaces `v0.0.1`'s draft.
+- Tagged `v0.0.2` with the accessibility fixes and desktop zoom (below). Its draft release has the same four installers: Windows 3.87 MB, macOS 9.54 MB, `.deb` 4.73 MB and `.AppImage` 79.43 MB. Every job passed. `v0.0.1`'s draft was deleted at the maintainer's request; its tag stays.
 
 Accessibility pass (2026-11-27), done:
 - New end-to-end checks (`ui/e2e/accessibility.spec.ts`) cover every M0 screen, in light and dark:
@@ -140,9 +140,8 @@ One piece at a time; nothing here is urgent. "Maintainer" marks the steps only y
    - Also note how long the window takes to appear (budget 1 s).
    - Also check that Ctrl and + zooms the window.
 2. Maintainer: compare live Grace with the master render and point out any differences.
-3. Maintainer: say whether to delete the superseded `v0.0.1` draft (drafts are private, so it can also stay).
-4. Publish `v0.0.2`. Then change the README's "Not ready to install yet" to a download link with the "Run anyway" and "Open Anyway" steps.
-5. Maintainer: apply for free Windows signing (SignPath Foundation) once a release is public.
+3. Publish `v0.0.2`. Then change the README's "Not ready to install yet" to a download link with the "Run anyway" and "Open Anyway" steps.
+4. Maintainer: apply for free Windows signing (SignPath Foundation) once a release is public.
 
 **Before the private alpha (after M2)**
 - Website (Astro on GitHub Pages): an OS-detecting download button, the unsigned-installer steps, a privacy page.
