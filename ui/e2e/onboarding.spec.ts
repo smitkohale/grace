@@ -11,7 +11,11 @@ test("first run: hello, find your tools, then your sessions", async ({ page }) =
   await expect(
     page.getByRole("heading", { name: "Let me look for the AI tools you use." }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Claude Code" })).toBeVisible();
+  // Finding tools asks each installed tool for its version, which can take a
+  // few seconds on a cold start.
+  await expect(page.getByRole("heading", { name: "Claude Code" })).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(page.getByRole("switch", { name: "Read Claude Code sessions" })).toBeChecked();
   await expect(page.getByRole("heading", { name: "Ollama" })).toBeVisible();
 
