@@ -122,7 +122,7 @@ fn parses_basic_fixture() {
     assert_eq!(info.turns, 2);
     assert_eq!(
         info.project_path.as_deref(),
-        Some(r"C:\Users\Test User\Projects\Fern & Fable")
+        Some(r"C:\Users\Test User\Projects\Maple & Moss")
     );
     let loads: Vec<_> = run
         .events

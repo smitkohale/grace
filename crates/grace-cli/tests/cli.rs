@@ -31,7 +31,7 @@ fn fake_home() -> FakeHome {
     for folder in [&home, &local, &empty] {
         fs::create_dir_all(folder).unwrap();
     }
-    let project = home.join(".claude/projects/C--Users-Test-User-Projects-Fern---Fable");
+    let project = home.join(".claude/projects/C--Users-Test-User-Projects-Maple---Moss");
     fs::create_dir_all(&project).unwrap();
     fs::copy(
         fixture("basic.jsonl"),
@@ -131,7 +131,7 @@ fn sessions_json_lists_fixture_sessions() {
     let rows: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(rows.as_array().unwrap().len(), 1);
     assert_eq!(rows[0]["title"], "Fix the sprite sheet");
-    assert_eq!(rows[0]["project_name"], "Fern & Fable");
+    assert_eq!(rows[0]["project_name"], "Maple & Moss");
     assert_eq!(rows[0]["turns"], 2);
 
     let again = home.grace().arg("sessions").output().unwrap();

@@ -25,7 +25,7 @@ struct Setup {
 fn setup() -> Setup {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().join("projects");
-    let project = root.join("C--Users-Test-User-Projects-Fern---Fable");
+    let project = root.join("C--Users-Test-User-Projects-Maple---Moss");
     fs::create_dir_all(&project).unwrap();
     let file = project.join("11111111-1111-4111-8111-111111111111.jsonl");
     let store = Store::open(&dir.path().join("grace home").join("grace.db")).unwrap();

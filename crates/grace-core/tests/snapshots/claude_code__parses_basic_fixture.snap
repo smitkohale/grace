@@ -21,7 +21,7 @@ boundary session_start seq  0 line  1 {}
 15 L14 t2  assistant_message assistant/text                     Added a test for the loader.
 16 L15 t2  hook_run          system/stop_hook_summary           Stop hooks: 1 ran, 0 errors
 info: title=Some("Fix the sprite sheet") turns=2 compactions=0 models=["claude-opus-5-5"]
-info: version=Some("2.1.330") entrypoint=Some("claude-desktop") branch=Some("main") project=Some("C:\\Users\\Test User\\Projects\\Fern & Fable")
+info: version=Some("2.1.330") entrypoint=Some("claude-desktop") branch=Some("main") project=Some("C:\\Users\\Test User\\Projects\\Maple & Moss")
 info: started=Some("2026-11-23T07:45:00.000Z") last=Some("2026-11-23T07:46:41.000Z")
 info: first_prompt=Some("Fix the sprite sheet loader") last_prompt=Some("Now add a test")
 stats: lines=19 bad=0 ignored=6 unknown={"future-thing": 1}

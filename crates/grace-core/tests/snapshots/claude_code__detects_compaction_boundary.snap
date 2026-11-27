@@ -12,7 +12,7 @@ boundary compaction    seq  2 line  3 {"post_tokens":12000,"pre_tokens":150000,"
  5 L7  t2  user_message      user/prompt                        Continue with the palette
  6 L8  t2  assistant_message assistant/text                     Palette done.
 info: title=Some("Build the level editor") turns=2 compactions=1 models=["claude-opus-5-5"]
-info: version=Some("2.1.330") entrypoint=Some("claude-desktop") branch=Some("main") project=Some("C:\\Users\\Test User\\Projects\\Fern & Fable")
+info: version=Some("2.1.330") entrypoint=Some("claude-desktop") branch=Some("main") project=Some("C:\\Users\\Test User\\Projects\\Maple & Moss")
 info: started=Some("2026-11-24T09:00:00.000Z") last=Some("2026-11-24T10:32:00.000Z")
 info: first_prompt=Some("Build the level editor") last_prompt=Some("Continue with the palette")
 stats: lines=8 bad=0 ignored=1 unknown={}

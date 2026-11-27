@@ -7,7 +7,7 @@ use serde_json::json;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-const PROJECT: &str = r"C:\Users\Test User\Projects\Fern & Fable";
+const PROJECT: &str = r"C:\Users\Test User\Projects\Maple & Moss";
 
 fn session(path: &str) -> SessionRef {
     SessionRef {
@@ -99,11 +99,11 @@ fn write_and_list_roundtrip() {
 #[test]
 fn paths_with_spaces_roundtrip() {
     let mut store = Store::open_in_memory().unwrap();
-    let file = r"C:\Users\Test User\.claude\projects\C--Fern---Fable\s1.jsonl";
+    let file = r"C:\Users\Test User\.claude\projects\C--Maple---Moss\s1.jsonl";
     write(&mut store, file, 1);
     let rows = store.list_sessions(&SessionQuery::default()).unwrap();
     assert_eq!(rows[0].project_path.as_deref(), Some(PROJECT));
-    assert_eq!(rows[0].project_name.as_deref(), Some("Fern & Fable"));
+    assert_eq!(rows[0].project_name.as_deref(), Some("Maple & Moss"));
     assert_eq!(rows[0].source_file, file);
     assert!(store.stored(file).unwrap().is_some());
     let by_project = store
@@ -130,7 +130,7 @@ fn search_matches_title_prompt_and_project() {
     };
     assert_eq!(find("sprite"), 1);
     assert_eq!(find("LOADER"), 1);
-    assert_eq!(find("fern &"), 1);
+    assert_eq!(find("maple &"), 1);
     assert_eq!(find("nothing like this"), 0);
     assert_eq!(find("50%_off"), 0);
 }

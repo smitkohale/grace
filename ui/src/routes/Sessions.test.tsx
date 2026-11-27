@@ -30,8 +30,8 @@ const row: SessionRow = {
   tool: "claude_code",
   session_id: "11111111",
   title: "Fix the sprite sheet",
-  project_path: "C:\\Users\\Test User\\Projects\\Fern & Fable",
-  project_name: "Fern & Fable",
+  project_path: "C:\\Users\\Test User\\Projects\\Maple & Moss",
+  project_name: "Maple & Moss",
   started_at: "2026-11-23T07:45:00.000Z",
   last_active_at: "2026-11-23T07:46:41.000Z",
   turns: 2,
@@ -60,7 +60,7 @@ describe("Sessions", () => {
     vi.mocked(api.sessions).mockResolvedValue([row]);
     renderWithQuery(<Sessions />);
     expect(await screen.findByText("Fix the sprite sheet")).toBeInTheDocument();
-    expect(screen.getByText("Fern & Fable")).toBeInTheDocument();
+    expect(screen.getByText("Maple & Moss")).toBeInTheDocument();
     expect(screen.getByText("2 turns")).toBeInTheDocument();
     expect(screen.getByText("1 compaction")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Fix the sprite sheet/ })).toHaveAttribute(

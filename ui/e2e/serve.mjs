@@ -10,7 +10,7 @@ const port = process.argv[2] ?? "4329";
 const repo = resolve(import.meta.dirname, "../..");
 const root = mkdtempSync(join(tmpdir(), "grace e2e "));
 const home = join(root, "Test User");
-const project = join(home, ".claude", "projects", "C--Users-Test-User-Projects-Fern---Fable");
+const project = join(home, ".claude", "projects", "C--Users-Test-User-Projects-Maple---Moss");
 mkdirSync(project, { recursive: true });
 mkdirSync(join(root, "empty"));
 cpSync(

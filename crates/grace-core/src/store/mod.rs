@@ -579,8 +579,8 @@ mod tests {
     #[test]
     fn project_names() {
         assert_eq!(
-            project_name(r"C:\Users\Test User\Projects\Fern & Fable"),
-            "Fern & Fable"
+            project_name(r"C:\Users\Test User\Projects\Maple & Moss"),
+            "Maple & Moss"
         );
         assert_eq!(project_name("/home/test/api/"), "api");
         assert_eq!(like_pattern("50%_off"), r"%50\%\_off%");
