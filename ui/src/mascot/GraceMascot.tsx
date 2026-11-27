@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import modelUrl from "../../../assets/brand/mascot/grace.glb?url";
+import still256 from "../../../assets/brand/mascot/renders/grace-256.webp?url";
+import still512 from "../../../assets/brand/mascot/renders/grace-512.webp?url";
 import { cn } from "../lib/cn";
 import { t } from "../strings/en";
-import { GraceGlyph } from "./GraceGlyph";
 import type { MascotState } from "./motion";
 import type { GraceScene } from "./scene";
 
@@ -123,7 +124,15 @@ export function GraceMascot({ state, size, className }: GraceMascotProps) {
           mode === "live" ? "opacity-100" : "opacity-0",
         )}
       />
-      {mode !== "live" && <GraceGlyph size={size === "hero" ? 120 : 64} />}
+      {mode !== "live" && (
+        // A still of the same model: shown at once, and kept without WebGL.
+        <img
+          src={size === "hero" ? still512 : still256}
+          alt=""
+          className="absolute inset-0 size-full object-contain"
+          draggable={false}
+        />
+      )}
     </>
   );
   const keepRef = (element: HTMLElement | null) => {

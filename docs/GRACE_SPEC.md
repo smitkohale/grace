@@ -512,6 +512,7 @@ Local-first means there is almost nothing to deploy: users run Grace on their ow
 | UI navigation | ≤ 100 ms |
 | 100 MB transcript | parsed in ≤ 10 s |
 | Each mascot image in the UI | ≤ 100 KB |
+| 3D mascot model (`grace.glb`) | ≤ 300 KB; three.js loaded only where Grace appears (about 160 KB gzipped) |
 
 **Code**
 - Rust stable (Cargo workspace) and TypeScript in strict mode. pnpm for JS packages.

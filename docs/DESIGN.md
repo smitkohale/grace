@@ -155,16 +155,24 @@ Use plain labels in the UI. The aviation names are the brand: use them on the we
 
 **Where she appears:** onboarding, empty states, the Home greeting, problem alerts, the chat drawer avatar, the tray menu header, the extension popup and the website. Data screens (Rules, Sessions) stay clean.
 
-**Motion:** subtle. A 2 px bob, a blink every few seconds, slowly floating cubes. CSS only, no live 3D. Motion turns off when the system's "reduce motion" setting is on, and pauses when the window is hidden.
+**Live 3D (maintainer's decision, 2026-11-27):** Grace is a real low-poly 3D model drawn with three.js, matching the master render's camera, colours and soft studio light.
+- **Interaction:** she turns her head toward the pointer, blinks, and perks up her top strand on hover. Clicking her, or pressing Enter or Space on the big Grace, makes her wave, hop and burst her cubes. You can drag to turn her, and she springs back.
+- **Restraint:** one live Grace per screen. At most 30 frames a second when idle. The 3D code loads only on screens that show her.
+
+**Motion:** subtle. A 2 px bob, a blink every few seconds, slowly floating cubes. With the system's "reduce motion" setting she holds a still pose. She pauses when the window is hidden or she's scrolled away. Without WebGL she's a still image of the same model.
 
 **Don't:** stretch or recolour her, place her on busy backgrounds, give her long paragraphs, or show her in front of an error. Problems get a clear message first; Grace supports it.
 
 ### Assets (`assets/brand/`)
-- **Now:** `grace-mascot.png` (the master render) and `grace-mascot-720.webp` (light version for the UI). The render's background is a warm gradient, so place her on a card with the same gradient (`--mascot-bg`) and she blends in until cut-outs exist. Use that light card in dark mode too.
-- **Needed from the 3D source:**
-  - each pose above as a transparent PNG (2048 px master), exported to WebP at 512, 256 and 128 px, with the same camera and lighting as the master;
-  - a head-only crop for the app icon (1024 px);
-  - a flat, single-colour tray glyph (SVG), such as the two square eyes or the diamond emblem, because a 3D render is unreadable at 16–22 px.
+- **The master:** `grace-mascot.png`, the reference for everything else.
+- **The 3D model** in `mascot/`:
+  - `build_grace.py` builds `grace.glb` in headless Blender. Every part is placed from measurements of the master, and `--compare` renders a front view aligned to it for overlays.
+  - Keep the model at or under 300 KB.
+- **Stills of the same model:**
+  - `mascot/renders/grace-{512,256,128}.webp` (transparent), from `ui/scripts/render-stills.mjs`;
+  - `mascot/renders/grace-icon-1024.png`: the head on her warm card, for the app icon.
+- **Placement:** show Grace on a card with the master's warm gradient (`--mascot-bg`), in dark mode too.
+- **Tray:** a flat, single-colour glyph of her two square eyes (`ui/src/mascot/GraceGlyph.tsx`), because a 3D render is unreadable at 16–22 px.
 - Keep every UI image at or under 100 KB.
 - **Logo:** the terracotta leaf (`logo.jpeg`) marks the website and README only. The app icon, installer and tray use Grace herself (a head render and the flat eye glyph).
 
@@ -236,4 +244,5 @@ Always pair shape and colour with the label or a tooltip.
 - Anything slower than 300 ms gets a skeleton loader and Grace's "thinking" state.
 - Long jobs (the first scan, "Find the moment") run in the background, with progress in the tray.
 - Images are lazy-loaded; each mascot image is at most 100 KB.
+- Grace's 3D model (at most 300 KB) and three.js load only on screens that show her. Her still image appears at once, and the live model fades in over it.
 - The extension and the website use the same tokens, cubes and voice.
