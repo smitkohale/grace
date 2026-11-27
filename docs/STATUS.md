@@ -111,6 +111,24 @@ Task 9, ship:
 
 - The AppImage carries its own copy of the Linux web engine, so it can't meet the 20 MB budget. Per R14, the spec and `check-sizes.mjs` now report it without budgeting it. The Linux job of the `v0.0.1` run still shows that size failure; the next tag will be green.
 
+Accessibility pass (2026-11-27), done:
+- New end-to-end checks (`ui/e2e/accessibility.spec.ts`) cover every M0 screen, in light and dark:
+  - text and input contrast;
+  - no sideways scrolling at 480 px (the smallest window at 200% zoom) or 320 px;
+  - a skip control that reaches the main content;
+  - a title for each screen;
+  - clear screen-reader names for session rows;
+  - an announced tool count;
+  - Grace holding still with reduced motion.
+- They found, and these fixes resolve:
+  - the "Found" and "Not found" chips and the "1 compaction" label below 4.5:1 contrast;
+  - a search-box border at 1.2:1;
+  - a Sessions list that cut off its columns at 200% zoom;
+  - a skip link that reloaded the page instead of moving focus;
+  - every screen titled just "Grace".
+- Dark mode also hid the eyes of the sidebar logo; fixed.
+- The desktop window can now be zoomed with Ctrl or Cmd and + or −. That isn't tried by hand yet; it ships in the next installer.
+
 ## Queue
 
 One piece at a time; nothing here is urgent. "Maintainer" marks the steps only you can do.
@@ -118,8 +136,8 @@ One piece at a time; nothing here is urgent. "Maintainer" marks the steps only y
 **Close M0**
 1. Maintainer: install the Windows build from the `v0.0.1` draft in a fresh Windows account. Done when the Sessions list is reached in under 2 minutes with no terminal. Also note how long the window takes to appear (budget 1 s).
 2. Maintainer: compare live Grace with the master render and point out any differences.
-3. Accessibility pass on the M0 screens: dark mode, 200% zoom, reduced motion, screen-reader labels. Keyboard-only is already covered by the end-to-end test.
-4. Publish `v0.0.1`. Then change the README's "Not ready to install yet" to a download link with the "Run anyway" and "Open Anyway" steps.
+3. Tag `v0.0.2` with the accessibility fixes, then check that zooming the desktop window works.
+4. Publish the release. Then change the README's "Not ready to install yet" to a download link with the "Run anyway" and "Open Anyway" steps.
 5. Maintainer: apply for free Windows signing (SignPath Foundation) once a release is public.
 
 **Before the private alpha (after M2)**
