@@ -71,22 +71,78 @@ Done and committed, with tests green (Rust fmt, clippy and tests; Biome, Vitest;
   - two new attachment types, caught by the drift log;
   - stored sessions are re-read when the parser version changes.
 
-In progress, Task 6 (3D mascot):
-- `assets/brand/mascot/build_grace.py` builds `grace.glb` (110 KB) in headless Blender.
-- `ui/src/mascot/` renders her live with three.js (lazy chunk, 156 KB gzipped): pointer follow, blink, hover perk, click or Enter to wave, drag to turn, pause when hidden, reduced-motion still pose.
-- Last change, built but not yet viewed: layered bangs, warmer eyes, contact shadow, reframed camera.
+Task 6, 3D mascot, done:
+- `assets/brand/mascot/build_grace.py` builds `grace.glb` (177 KB) from pixel measurements of the master render. `--compare` renders an aligned front view for overlays.
+- `ui/src/mascot/` shows her live with three.js. It matches the master's camera (about 6° down, long lens), sampled colours and soft studio light with shadows.
+- Stills (WebP, 6–28 KB) and the app icon come from `ui/scripts/render-stills.mjs`.
+- DESIGN.md §5/§7 and spec §11 updated.
+- The repo is public at https://github.com/smitkohale/grace (maintainer said yes on 2026-11-27).
 
-## Next
+Tasks 7–8, desktop app and CI, done:
+- `app/src-tauri` runs the engine in-process. The local API binds a random 127.0.0.1 port with a fresh token, and the window gets both through the `api_info` command. Icons come from Grace's head.
+- Checked on this machine through WebView2's debugging port: Find your tools shows the real tools, and Continue opens the Sessions list.
+- RAM (debug build; private working set, WebView2 included):
+  - about 165–175 MB on Sessions;
+  - 215 MB with live 3D Grace on screen;
+  - 207 MB on Sessions after onboarding;
+  - the engine itself uses 4–10 MB.
+  - The budget is 200 MB (open question below). Measuring also found three GPU-memory leaks in the mascot, now fixed.
+- CI (`.github/workflows/ci.yml`) is green on Windows, macOS and Linux:
+  - engine and CLI checks;
+  - UI lint, tests and build;
+  - onboarding end to end;
+  - desktop app lint on Linux;
+  - license allowlists;
+  - CLI size (7.1 MB of 15 MB).
+- `release.yml` builds draft installers on `v*` tags.
+- Scope note: bundling the `grace` CLI as a sidecar moves to M1, where hooks first need it. M0's app runs the engine in-process.
 
-1. Task 6, rest:
-   - view and tune Grace against `grace-mascot.png`;
-   - still WebP renders (512/256/128) and a head crop for the app icon;
-   - DESIGN.md §5/§7 and spec §11 updates;
-   - commit.
-2. Tasks 7–10 in `docs/plans/m0.md`: Tauri app, CI, GitHub repo (ask the maintainer before the first public push), STATUS.
-3. To preview: run `cargo build -p grace-cli` and `pnpm -C ui build`, then `target\debug\grace.exe serve --port 4319 --token devtoken` and open `http://127.0.0.1:4319/#token=devtoken`.
+Task 9, ship:
+- Tagged `v0.0.1`. The release workflow built one draft release (private until published) with four installers:
+
+  | Installer | Size |
+  |---|---|
+  | Windows | 3.86 MB |
+  | macOS (universal) | 9.54 MB |
+  | Linux `.deb` | 4.73 MB |
+  | Linux `.AppImage` | 79.43 MB |
+
+- The AppImage carries its own copy of the Linux web engine, so it can't meet the 20 MB budget. Per R14, the spec and `check-sizes.mjs` now report it without budgeting it. The Linux job of the `v0.0.1` run still shows that size failure; the next tag will be green.
+
+## Queue
+
+One piece at a time; nothing here is urgent. "Maintainer" marks the steps only you can do.
+
+**Close M0**
+1. Maintainer: install the Windows build from the `v0.0.1` draft in a fresh Windows account. Done when the Sessions list is reached in under 2 minutes with no terminal. Also note how long the window takes to appear (budget 1 s).
+2. Maintainer: compare live Grace with the master render and point out any differences.
+3. Maintainer: decide the RAM budget for live 3D (open question below).
+4. Accessibility pass on the M0 screens: dark mode, 200% zoom, reduced motion, screen-reader labels. Keyboard-only is already covered by the end-to-end test.
+5. Publish `v0.0.1`. Then change the README's "Not ready to install yet" to a download link with the "Run anyway" and "Open Anyway" steps.
+6. Maintainer: apply for free Windows signing (SignPath Foundation) once a release is public.
+
+**Before the private alpha (after M2)**
+- Website (Astro on GitHub Pages): an OS-detecting download button, the unsigned-installer steps, a privacy page.
+- Auto-update: Tauri's updater with signed manifests on GitHub Releases, checking at most once a day.
+- An in-app "Send feedback" button that opens a prefilled GitHub issue.
+- Docs: `CHANGELOG.md`, `docs/ARCHITECTURE.md`, a README demo GIF.
+- Pick the registry name before the first published package.
+- A short security checklist, run before every release (spec §12).
+
+**Milestones** (each starts with a plan and the maintainer's OK, R2)
+- M1 Rules and delivery check. Includes setup steps 3–4, the tray, notifications, hooks, and the CLI installed to `~/.grace/bin`.
+- M2 Why it broke. Then the private alpha and the first five-person user test.
+- M3 Where you left off. Then the public beta.
+- M4 Hand-off (Codex, "Continue in…"). Then the launch.
+- M5–M9 as in the spec.
+
+To preview the web UI: `pnpm -C ui build`, then `cargo run -p grace-cli -- serve --open`.
 
 ## Open questions
 
+- **RAM budget with live 3D Grace.** The spec allows 200 MB with the window open.
+  - WebView2 alone uses about 170 MB on this machine for a plain screen.
+  - Live 3D Grace adds about 45 MB while she's on screen, and some of that stays afterwards.
+  - Options: raise the budget to 250 MB, or keep 200 MB and use stills instead of live 3D.
 - Name on registries: `grace-ai` or `getgrace`? (Not needed until the first published package.)
 - When to apply for free Windows signing (after the first public releases).
