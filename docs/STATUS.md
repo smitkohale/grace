@@ -56,9 +56,35 @@ Credential files seen by name only and never opened: `~/.codex/auth.json`, `~/.g
 - Codex index file is `state_5.sqlite`, not `state.db`.
 - `claude` CLI may be absent when only the Desktop app is used: connecting Claude Code can't rely on `claude plugin install`.
 
+## M0 progress (2026-11-27)
+
+Done and committed, with tests green (Rust fmt, clippy and tests; Biome, Vitest; Playwright in Edge):
+- Tasks 0–5 in `docs/plans/m0.md`:
+  - repo setup and spec fixes;
+  - event model and redaction;
+  - Claude Code reader (parses 100 MB in 1.9 s);
+  - SQLite store with incremental scans;
+  - `grace doctor`, `grace sessions`, `grace serve`;
+  - the UI: onboarding steps 1–2, Sessions list, session detail.
+- Checked against this machine's real transcripts. That found three things, now fixed:
+  - turns count from 1;
+  - two new attachment types, caught by the drift log;
+  - stored sessions are re-read when the parser version changes.
+
+In progress, Task 6 (3D mascot):
+- `assets/brand/mascot/build_grace.py` builds `grace.glb` (110 KB) in headless Blender.
+- `ui/src/mascot/` renders her live with three.js (lazy chunk, 156 KB gzipped): pointer follow, blink, hover perk, click or Enter to wave, drag to turn, pause when hidden, reduced-motion still pose.
+- Last change, built but not yet viewed: layered bangs, warmer eyes, contact shadow, reframed camera.
+
 ## Next
 
-1. Build M0 by following `docs/plans/m0.md` and ticking its boxes.
+1. Task 6, rest:
+   - view and tune Grace against `grace-mascot.png`;
+   - still WebP renders (512/256/128) and a head crop for the app icon;
+   - DESIGN.md §5/§7 and spec §11 updates;
+   - commit.
+2. Tasks 7–10 in `docs/plans/m0.md`: Tauri app, CI, GitHub repo (ask the maintainer before the first public push), STATUS.
+3. To preview: run `cargo build -p grace-cli` and `pnpm -C ui build`, then `target\debug\grace.exe serve --port 4319 --token devtoken` and open `http://127.0.0.1:4319/#token=devtoken`.
 
 ## Open questions
 

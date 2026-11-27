@@ -104,6 +104,7 @@ export const en = {
     thinking: "Grace, thinking, with cubes circling her",
     idle: "Grace, a small robot with white hair and teal accents",
     sleeping: "Grace, resting with her eyes closed",
+    press: "Press to say hi",
   },
   time: {
     justNow: "just now",
