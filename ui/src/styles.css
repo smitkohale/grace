@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Design tokens: docs/DESIGN.md §6, sampled from the mascot render. */
+:root {
+  --paper: #f7f1eb;
+  --surface: #fffbf7;
+  --ink: #35312e;
+  --muted: #6f665f;
+  --line: #e6dcd3;
+  --teal: #55c9cd;
+  --teal-strong: #137879;
+  --amber: #fcc067;
+  --amber-strong: #a86a12;
+  --coral: #c2412d;
+  --on-accent: #1f1d1b;
+  --mascot-bg: linear-gradient(180deg, #dcd1c8 0%, #f3e5db 100%);
+  --radius-card: 8px;
+  --radius-control: 6px;
+}
+
+[data-theme="dark"] {
+  --paper: #1f1d1b;
+  --surface: #2a2724;
+  --ink: #f3ece6;
+  --muted: #b3a9a1;
+  --line: #3a3632;
+  --teal: #55c9cd;
+  --teal-strong: #7ad8db;
+  --amber: #fcc067;
+  --amber-strong: #fcc067;
+  --coral: #f08a76;
+  --on-accent: #1f1d1b;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-teal: var(--teal);
+  --color-teal-strong: var(--teal-strong);
+  --color-amber: var(--amber);
+  --color-amber-strong: var(--amber-strong);
+  --color-coral: var(--coral);
+  --color-on-accent: var(--on-accent);
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", "Inter Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+}
+
+html {
+  background: var(--paper);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible focus everywhere (WCAG 2.2 AA). */
+:focus-visible {
+  outline: 2px solid var(--teal-strong);
+  outline-offset: 2px;
+}
+
+.mascot-card {
+  background: var(--mascot-bg);
+}
+
+/* biome-ignore-start lint/complexity/noImportantStyles: reduced motion must override every animation */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: reduced motion must override every animation */

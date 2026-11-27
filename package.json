@@ -1,0 +1,10 @@
+{
+  "name": "grace-workspace",
+  "private": true,
+  "packageManager": "pnpm@12.23.0",
+  "scripts": {
+    "ui:dev": "pnpm -C ui dev",
+    "ui:build": "pnpm -C ui build",
+    "ui:check": "pnpm -C ui lint && pnpm -C ui test"
+  }
+}

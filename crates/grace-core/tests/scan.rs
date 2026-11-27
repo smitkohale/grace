@@ -1,9 +1,9 @@
 //! Scanning real files: skipping, incremental reads, resets and removals.
 
-use grace_core::Redactor;
-use grace_core::adapters::{Adapter, ClaudeCode};
+use grace_core::adapters::{Adapter, ClaudeCode, ParseOutcome, ParseState, Parsed, SessionRef};
 use grace_core::scan::{ScanReport, scan};
 use grace_core::store::{SessionQuery, Store};
+use grace_core::{Redactor, ToolId};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -152,6 +152,50 @@ fn removed_file_removes_session() {
             .unwrap()
             .is_empty()
     );
+}
+
+/// The Claude Code adapter with a chosen parser version.
+struct Versioned(ClaudeCode, u32);
+
+impl Adapter for Versioned {
+    fn tool(&self) -> ToolId {
+        self.0.tool()
+    }
+    fn parser_version(&self) -> u32 {
+        self.1
+    }
+    fn discover(&self) -> anyhow::Result<Vec<SessionRef>> {
+        self.0.discover()
+    }
+    fn parse(
+        &self,
+        session: &SessionRef,
+        state: Option<ParseState>,
+        redactor: &Redactor,
+        sink: &mut dyn FnMut(Parsed) -> anyhow::Result<()>,
+    ) -> anyhow::Result<ParseOutcome> {
+        let mut outcome = self.0.parse(session, state, redactor, sink)?;
+        outcome.state.parser_version = self.1;
+        Ok(outcome)
+    }
+}
+
+#[test]
+fn parser_upgrade_rereads_sessions() {
+    let mut s = setup();
+    fs::write(&s.file, fixture_text("basic.jsonl")).unwrap();
+    let run = |s: &mut Setup, version: u32| {
+        let adapters: Vec<Box<dyn Adapter>> = vec![Box::new(Versioned(
+            ClaudeCode::new(s.root.clone()),
+            version,
+        ))];
+        scan(&mut s.store, &adapters, &Redactor::default(), &mut |_| {}).unwrap()
+    };
+    assert_eq!(run(&mut s, 1).parsed, 1);
+    assert_eq!(run(&mut s, 1).skipped, 1);
+    let upgraded = run(&mut s, 2);
+    assert_eq!((upgraded.parsed, upgraded.events_added), (1, 17));
+    assert_eq!(s.event_count(), 17, "re-read from the start, not appended");
 }
 
 #[test]

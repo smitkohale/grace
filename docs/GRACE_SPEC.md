@@ -232,7 +232,7 @@ Verify each on a real machine before coding its adapter: formats change between 
 - Instruction loads are `attachment` entries of type `instructions`: `files[]` with `path`, `type` (`Project` for CLAUDE.md, `AutoMem` for MEMORY.md, …) and `content`.
 - Compaction leaves a `system` entry with subtype `compact_boundary` (`compactMetadata`: `trigger` auto/manual, `preTokens`, `postTokens`, preserved segment; `parentUuid` is null and `logicalParentUuid` links back), then a `user` entry with `isCompactSummary`, `compact_file_reference` attachments for re-attached files, and a `derived-from` entry (`sessions[]` with `via: "compact"`). Resume and fork markers were not seen yet; `derived-from` with another `via` is the likely shape.
 - The agent's own task lists appear as tool calls: `mcp__ccd_turn__update_plan` in desktop-app sessions, TodoWrite or TaskCreate/TaskUpdate in the CLI. Support all of them.
-- User entries carry `turnPosition.promptIndex` (the turn). Desktop-app sessions have `entrypoint: "claude-desktop"`, and the `claude` CLI may not be installed at all.
+- User entries carry `turnPosition.promptIndex`, the turn number counted from 1. Desktop-app sessions have `entrypoint: "claude-desktop"`, and the `claude` CLI may not be installed at all.
 - Hooks are recorded as `system`/`stop_hook_summary` entries and `hook_*` attachments (`hookEvent`, `hookName`).
 - Bookkeeping entries (`custom-title`, `last-prompt`, `cost-state`, `queue-operation`, `file-history-*`, …) carry session metadata such as the title.
 - Transcripts include the user's email (`session_context` attachment) and org IDs: redact them on ingest.

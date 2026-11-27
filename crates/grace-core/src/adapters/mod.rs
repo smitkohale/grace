@@ -44,6 +44,9 @@ pub struct SessionInfo {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ParseState {
+    /// The adapter's [`Adapter::parser_version`] that wrote this state. When
+    /// Grace's parsing improves, sessions are re-read from the start.
+    pub parser_version: u32,
     /// Byte offset just after the last complete line read.
     pub offset: u64,
     /// Number of the last complete line read.
@@ -97,6 +100,9 @@ pub struct ParseOutcome {
 /// Reads one tool's sessions. Discovery and parsing are read-only.
 pub trait Adapter: Send + Sync {
     fn tool(&self) -> ToolId;
+
+    /// Bump whenever parsing changes what gets stored, so saved sessions are re-read.
+    fn parser_version(&self) -> u32;
 
     /// Finds session files, newest first.
     fn discover(&self) -> Result<Vec<SessionRef>>;

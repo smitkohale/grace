@@ -16,6 +16,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
+/// 1: first release of the M0 parser (turns counted from `promptIndex`, 1-based).
+const PARSER_VERSION: u32 = 1;
 const SUMMARY_CHARS: usize = 160;
 const TITLE_CHARS: usize = 80;
 const PROMPT_CHARS: usize = 200;
@@ -95,6 +97,10 @@ impl Adapter for ClaudeCode {
         ToolId::ClaudeCode
     }
 
+    fn parser_version(&self) -> u32 {
+        PARSER_VERSION
+    }
+
     fn discover(&self) -> Result<Vec<SessionRef>> {
         let mut sessions = Vec::new();
         let projects = match std::fs::read_dir(&self.root) {
@@ -155,7 +161,10 @@ impl Adapter for ClaudeCode {
                 session.path.display()
             );
         }
-        let state = state.unwrap_or_else(|| ParseState::new(&session.session_id));
+        let state = state.unwrap_or_else(|| ParseState {
+            parser_version: PARSER_VERSION,
+            ..ParseState::new(&session.session_id)
+        });
         let mut parser = Parser {
             state,
             stats: ParseStats::default(),
@@ -373,9 +382,10 @@ impl Parser<'_> {
                 sink,
             );
         }
+        // `promptIndex` counts prompts from 1 (verified on 2.1.330 transcripts).
         let prompt_index = e["turnPosition"]["promptIndex"].as_u64();
         if let Some(index) = prompt_index {
-            self.state.turn = u32::try_from(index + 1).unwrap_or(u32::MAX);
+            self.state.turn = u32::try_from(index.max(1)).unwrap_or(u32::MAX);
         }
 
         let mut had_tool_result = false;
@@ -508,7 +518,12 @@ impl Parser<'_> {
                         }
                         Some("thinking" | "redacted_thinking") => {
                             let chars = str_at(block, "thinking").map_or(0, |t| t.chars().count());
-                            let summary = format!("(thinking, {chars} characters)");
+                            // The desktop app often stores thinking without its text.
+                            let summary = if chars == 0 {
+                                "(thinking)".to_string()
+                            } else {
+                                format!("(thinking, {chars} characters)")
+                            };
                             let thinking = ev(
                                 EventKind::AssistantMessage,
                                 "assistant/thinking",

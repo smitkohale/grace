@@ -119,6 +119,17 @@ fn scan_session(
         Some(head) => same_head(&session.path, head)?,
         None => false,
     };
+    let current = adapter.parser_version();
+    let stored = stored.map(|mut s| {
+        // Saved by an older parser: forget the position so it's read again.
+        if s.state
+            .as_ref()
+            .is_some_and(|state| state.parser_version != current)
+        {
+            s.state = None;
+        }
+        s
+    });
     let (state, reset) = match stored {
         Some(s)
             if same_start
